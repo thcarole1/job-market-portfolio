@@ -1,7 +1,10 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent  # remonte de config/ vers la racine
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env")
+    model_config = SettingsConfigDict(env_file=ROOT / ".env")
 
 
     #🗄️ PostgreSQL — credentials, nom de la base, port

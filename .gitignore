@@ -37,3 +37,6 @@ logs/
 # Fichiers OS (générés automatiquement par Windows/Mac/Linux)
 .DS_Store
 Thumbs.db
+
+# Notebooks d'exploration
+notebooks/
