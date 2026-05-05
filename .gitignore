@@ -1,0 +1,42 @@
+#Secrets / variables d'env
+.env
+
+#Artéfacts Python (__pycache__, .pyc, etc.)
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+#Environnements virtuels
+.venv/
+
+#Données volumineuses (data/raw/, data/processed/)
+data/raw/*
+data/processed/*
+
+# Mais on garde la structure du dossier
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+#Modèles ML entraînés (.pkl, .joblib, .h5...)
+*.pkl
+*.joblib
+*.h5
+*.pt
+*.onnx
+
+#Fichiers d'IDE
+.vscode/
+.idea/
+*.iml
+
+# Logs
+*.log
+logs/
+
+# Fichiers OS (générés automatiquement par Windows/Mac/Linux)
+.DS_Store
+Thumbs.db
+
+# Notebooks d'exploration
+notebooks/

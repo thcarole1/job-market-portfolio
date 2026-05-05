@@ -1,0 +1,94 @@
+services:
+ # ── Bases de données ──────────────────────────────────────
+  postgresql:
+    image: postgres:16
+    container_name: my_postgres_job_market
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./storage/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - job-market-backend-portfolio
+    restart: unless-stopped
+
+  mongodb:
+    image: mongo:8.0
+    container_name: my_mongo_job_market
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+    volumes:
+      - mongo_data:/data/db
+    ports:
+      - 27017:27017
+    networks:
+      - job-market-backend-portfolio
+    restart: unless-stopped
+
+  elasticsearch:
+    container_name: es-container
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.17.0
+    environment:
+      - xpack.security.enabled=false
+      - "discovery.type=single-node"
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m   # ← limite la RAM utilisée
+    volumes:
+      - elastic_data:/usr/share/elasticsearch/data
+    ports:
+      - 9200:9200
+    networks:
+      - job-market-backend-portfolio
+    restart: unless-stopped
+
+
+# ── Interfaces d'administration ───────────────────────────
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: my_pgadmin_job_market
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
+    ports:
+      - "5050:80"
+    networks:
+      - job-market-backend-portfolio    # ← doit voir postgresql
+      - job-market-frontend-portfolio   # ← accessible depuis navigateur
+    depends_on:
+      - postgresql
+    restart: unless-stopped
+
+  kibana:
+    container_name: kb-container
+    image: docker.elastic.co/kibana/kibana:8.17.0
+    environment:
+      - ELASTICSEARCH_HOSTS=http://es-container:9200
+    ports:
+      - 5601:5601
+    networks:
+      - job-market-backend-portfolio   # ← doit voir elasticsearch
+      - job-market-frontend-portfolio   # ← accessible depuis navigateur
+    depends_on:
+      - elasticsearch
+    restart: unless-stopped
+
+# ── Volumes ───────────────────────────────────────────────────
+volumes:
+  postgres_data:
+  mongo_data:
+  elastic_data:
+
+
+# ── Réseaux ───────────────────────────────────────────────────
+networks:
+  job-market-backend-portfolio:
+    driver: bridge
+    name: job-market-backend-portfolio
+
+  job-market-frontend-portfolio:
+    driver: bridge
+    name: job-market-frontend-portfolio
