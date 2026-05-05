@@ -45,8 +45,8 @@ class Settings(BaseSettings):
     FRANCETRAVAIL_CLIENT_SECRET : str
 
     #PGADMIN
-    PGADMIN_EMAIL= str
-    PGADMIN_PASSWORD= str
+    PGADMIN_EMAIL : str
+    PGADMIN_PASSWORD : str
 
     #⚙️ Applicatif — environnement (dev/prod), ports exposés
     ENVIRONMENT : str = 'dev'            # dev | prod — change le comportement des logs, erreurs, etc.
