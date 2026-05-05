@@ -1,0 +1,16 @@
+{
+  "mappings": {
+    "properties": {
+      "id":             {"type": "keyword" },
+      "source" :        {"type": "keyword" },
+      "contract_type" : {"type": "keyword" },
+      "title" :         {"type": "text" },
+      "description" :   {"type": "text" },
+      "creation_date" : {"type": "date" },
+      "salary_min" :    {"type": "float" },
+      "salary_max" :    {"type": "float" },
+      "company_name":   {"type": "text" },
+      "workplace_city": {"type": "keyword" }
+    }
+  }
+}
