@@ -1,3 +1,18 @@
+'''
+settings.py centralise toutes les variables d'environnement
+du projet en un seul endroit.
+
+Au lieu de faire os.getenv("POSTGRES_HOST") partout dans le code,
+tu importes l'objet settings et tu accèdes à settings.POSTGRES_HOST.
+
+Avantages :
+- Un seul endroit pour gérer la config — si tu renommes une variable,
+  tu ne changes qu'ici
+- Typage — Pydantic valide que POSTGRES_PORT est bien un int, pas une string
+- Erreur explicite au démarrage — si une variable obligatoire est absente
+  du .env, l'app refuse de démarrer avec un message clair
+'''
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pathlib import Path
 
@@ -29,6 +44,9 @@ class Settings(BaseSettings):
     FRANCETRAVAIL_CLIENT_ID : str
     FRANCETRAVAIL_CLIENT_SECRET : str
 
+    #PGADMIN
+    PGADMIN_EMAIL= str
+    PGADMIN_PASSWORD= str
 
     #⚙️ Applicatif — environnement (dev/prod), ports exposés
     ENVIRONMENT : str = 'dev'            # dev | prod — change le comportement des logs, erreurs, etc.
