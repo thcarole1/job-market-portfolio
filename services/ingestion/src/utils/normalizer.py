@@ -61,9 +61,10 @@ def normalize_france_travail(offer: dict) -> dict:
     "adapted_company" :	                    offer.get("entrepriseAdaptee"),
     "employer_handiengage" :	            offer.get("employeurHandiEngage"),
     "languages" :                           offer.get("langues", []),
+    "competences":                          offer.get("competences", []),
     "professional_qualities" :              offer.get("qualitesProfessionnelles", []),
-    "work_context_schedules" :               offer.get("contexteTravail", {}).get("horaires"),
-    "work_context_exercise_conditions" :     offer.get("contexteTravail", {}).get("conditionsExercice"),
+    "work_context_schedules" :              offer.get("contexteTravail", {}).get("horaires"),
+    "work_context_exercise_conditions" :    offer.get("contexteTravail", {}).get("conditionsExercice"),
     "collected_at" :	                    datetime.now(timezone.utc).isoformat(),
     "source" :	                            "France_Travail",
         }
