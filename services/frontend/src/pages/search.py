@@ -74,6 +74,10 @@ if submitted and query:
                     st.write(f"- {l.get('libelle')} ({l.get('exigence')})")
 
             st.markdown("---")
+            st.subheader("Description complète")
+            st.write(offre.get('description', 'N/A'))
+
+            st.markdown("---")
             st.subheader("Postuler")
 
             # Cherche le premier lien de candidature disponible
