@@ -1,4 +1,60 @@
 services:
+ # ── Services créés  ──────────────────────────────────────
+  ingestion:
+      build:
+        context: .           # racine du projet
+        dockerfile: services/ingestion/Dockerfile
+      container_name: ingestion
+      env_file:
+        - .env
+      depends_on:
+        mongodb:
+          condition: service_started
+        elasticsearch:
+          condition: service_started
+      networks:
+        - job-market-backend-portfolio
+
+  ml:
+      build:
+        context: .           # racine du projet
+        dockerfile: services/ml/Dockerfile
+      container_name: ml
+      env_file:
+        - .env
+      volumes:
+        - ml_models:/app/services/ml/models
+      depends_on:
+        ingestion:
+          condition: service_completed_successfully
+        mongodb:
+          condition: service_started
+      networks:
+        - job-market-backend-portfolio
+
+  api:
+      build:
+        context: .           # racine du projet
+        dockerfile: services/api/Dockerfile
+      container_name: api
+      env_file:
+        - .env
+      ports:
+        - "${API_PORT}:8000"
+      volumes:
+        - ml_models:/app/services/ml/models
+      depends_on:
+        ml:
+          condition: service_completed_successfully
+        mongodb:
+          condition: service_started
+        elasticsearch:
+          condition: service_started
+      networks:
+        - job-market-backend-portfolio
+        - job-market-frontend-portfolio
+
+
  # ── Bases de données ──────────────────────────────────────
   postgresql:
     image: postgres:16
@@ -81,6 +137,7 @@ volumes:
   postgres_data:
   mongo_data:
   elastic_data:
+  ml_models:
 
 
 # ── Réseaux ───────────────────────────────────────────────────
