@@ -1,0 +1,10 @@
+.venv/
+data/
+notebooks/
+*.pkl
+*.log
+.git/
+__pycache__/
+*.pyc
+.env
+services/ml/models/
