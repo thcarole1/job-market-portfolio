@@ -40,6 +40,9 @@ def get_offer(q:QueryRequest):
         filtered_ids = [
             o["id"] for o in loader.db["offres_normalisees"].find(query_filter, {"id": 1, "_id": 0})]
 
+        if len(filtered_ids) == 0:
+            return []  # ← aucun résultat pour ce filtre
+
     # Recherche des offres similaires à la requête utilisateur
     top_offres = recommend_offers(q.query, q.top_n,filtered_ids)
     scores_by_id = {o["id"]: o["score"] for o in top_offres}
