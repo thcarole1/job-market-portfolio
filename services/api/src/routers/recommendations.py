@@ -1,9 +1,10 @@
-from fastapi import APIRouter,HTTPException
+from fastapi import APIRouter,HTTPException, UploadFile, File
 from pydantic import BaseModel,Field
 from enum import Enum
 
 from services.ml.src.predict import recommend_offers
 from services.ingestion.src.loaders.mongo_loader import Mongoloader
+from services.ml.src.cv_parser import CVParser
 
 router = APIRouter()
 loader = Mongoloader()
@@ -45,6 +46,49 @@ def get_offer(q:QueryRequest):
 
     # Recherche des offres similaires à la requête utilisateur
     top_offres = recommend_offers(q.query, q.top_n,filtered_ids)
+    scores_by_id = {o["id"]: o["score"] for o in top_offres}
+    offres_trouvees = []
+    for offre in top_offres:
+        result = loader.db["offres_normalisees"].find_one({'id' : offre.get('id')}, {'_id' : 0})
+        if not result:
+            continue # offre non trouvée → on passe à la suivante
+        else:
+            result["score"] = scores_by_id[result["id"]]  # ← ajoute le score à l'offre
+            offres_trouvees.append(result)
+
+    return offres_trouvees
+
+
+@router.post("/cv")
+async def recommend_from_cv(
+    file: UploadFile = File(...),
+    top_n: int = 10,
+    contract_type: str | None = None,
+    workplace_city: str | None = None
+):
+    if file.filename.endswith(".pdf"):
+        cv_bytes = await file.read()
+        cv_parsed = CVParser().parse(file_bytes = cv_bytes,file_type = "pdf")
+    else:
+        raise HTTPException(status_code=422, detail="Format non supporté. Envoyez un fichier PDF.")
+
+    # On filtre d'abord (si filtre existe) et seulement ensuite on fait le scoring
+    query_filter = {}
+    if contract_type:
+        query_filter["contract_type"] = {"$regex": contract_type, "$options": "i"}
+    if workplace_city:
+        query_filter["workplace_label"] = {"$regex": workplace_city, "$options": "i"}
+
+    filtered_ids = None
+    if query_filter:
+        filtered_ids = [
+            o["id"] for o in loader.db["offres_normalisees"].find(query_filter, {"id": 1, "_id": 0})]
+
+        if len(filtered_ids) == 0:
+            return []  # ← aucun résultat pour ce filtre
+
+    # Recherche des offres similaires à la requête utilisateur
+    top_offres = recommend_offers(cv_parsed, top_n,filtered_ids)
     scores_by_id = {o["id"]: o["score"] for o in top_offres}
     offres_trouvees = []
     for offre in top_offres:
