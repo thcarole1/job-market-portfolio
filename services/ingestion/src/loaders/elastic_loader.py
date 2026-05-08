@@ -10,6 +10,7 @@ class Elasticloader:
         logger.info("Instanciation de ElasticSearch - Tentative de connexion à ElasticSearch")
         try:
             self.es = Elasticsearch(f"http://{settings.ELASTIC_HOST}:{settings.ELASTIC_PORT}")
+            self.index_name = settings.ELASTICSEARCH_INDEX
             logger.info("Instanciation de ElasticSearch - Connexion à ElasticSearch réussie !")
         except ApiError as e:
             logger.error(f"Erreur connexion à ElasticSearch : {e}")
