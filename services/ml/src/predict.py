@@ -5,21 +5,24 @@ from pathlib import Path
 import logging
 logger = logging.getLogger(__name__)
 
+from pathlib import Path
+ROOT = Path(__file__).resolve().parents[3]
+MODELS_DIR = ROOT / "services/ml/models"
+
 def recommend_offers(cv_text: str,
                      top_n: int = 10,
                      offer_ids: list | None = None) -> list:
     #1. Charger les 3 fichiers .pkl
-    output_path = Path("services/ml/models")
 
-    with open(f"{output_path}/tfidf_vectorizer.pkl", "rb") as f:
+    with open(f"{MODELS_DIR}/tfidf_vectorizer.pkl", "rb") as f:
         vectorizer = pickle.load(f)
     logger.info(f"Chargement du vectorizer réussie.")
 
-    with open(f"{output_path}/tfidf_matrix.pkl", "rb") as f:
+    with open(f"{MODELS_DIR}/tfidf_matrix.pkl", "rb") as f:
         tfidf_matrix = pickle.load(f)
     logger.info(f"Chargement de la matrice tfidf réussie.")
 
-    with open(f"{output_path}/tfidf_ids.pkl", "rb") as f:
+    with open(f"{MODELS_DIR}/tfidf_ids.pkl", "rb") as f:
         ids = pickle.load(f)
     logger.info(f"Chargement des identifiants réussie.")
 

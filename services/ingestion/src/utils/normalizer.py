@@ -3,6 +3,12 @@ from datetime import datetime, timezone
 
 
 def normalize_france_travail(offer: dict) -> dict:
+    # Extraction du niveau de formation depuis trainings
+    trainings = offer.get("formations", []) or []
+    niveaux = [t.get("niveauLibelle", "") for t in trainings if t.get("niveauLibelle")]
+    formation_requise = niveaux[0] if niveaux else None
+
+
     return {
 
     "id"    :	                            offer.get("id"),
@@ -29,6 +35,7 @@ def normalize_france_travail(offer: dict) -> dict:
     "required_experience" :	                offer.get("experienceExige"),
     "experience_label" :	                offer.get("experienceLibelle"),
     "trainings" :                           offer.get("formations", []),
+     "formation_requise":                   formation_requise,  # ← nouveau champ
     "salary_label" :                        offer.get("salaire", {}).get("libelle"),
     "salary_comment" :                      offer.get("salaire", {}).get("commentaire"),
     "salary_supplement1" :                  offer.get("salaire", {}).get("complément1"),

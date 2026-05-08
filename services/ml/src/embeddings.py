@@ -7,8 +7,10 @@ from services.ml.src.features import build_offer_text
 
 logger = logging.getLogger(__name__)
 
+from pathlib import Path
+ROOT = Path(__file__).resolve().parents[3]
+MODELS_DIR = ROOT / "services/ml/models"
 MODEL_NAME = "paraphrase-multilingual-mpnet-base-v2"
-MODELS_DIR = "services/ml/models"
 
 def train_sbert():
     """
