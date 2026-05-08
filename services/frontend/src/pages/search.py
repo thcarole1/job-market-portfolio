@@ -87,6 +87,8 @@ with tab1:
             department = st.text_input("Ou département", placeholder="Ex: 78")
         with col4:
             top_n = st.slider("Nombre de résultats", 1, 50, 10)
+        model = st.selectbox("Modèle ML", ["tfidf", "sbert"],
+                    help="TF-IDF = baseline rapide, SBERT = sémantique")
         submitted = st.form_submit_button("🔍 Rechercher")
 
     if submitted and query:
@@ -98,7 +100,7 @@ with tab1:
             "workplace_city": location_filter
         }
         with st.spinner("Recherche en cours..."):
-            r = requests.post(f"{API_URL}/recommend/", json=payload)
+            r = requests.post(f"{API_URL}/recommend/", json=payload, params={"model": model})
             results = r.json()
         _display_results(results)
 
@@ -116,6 +118,9 @@ with tab2:
     with col4:
         top_n_cv = st.slider("Nombre de résultats", 1, 50, 10, key="cv_topn")
 
+    model_cv = st.selectbox("Modèle ML", ["tfidf", "sbert"], key="cv_model",
+                        help="TF-IDF = baseline rapide, SBERT = sémantique")
+
     if uploaded_file and st.button("🔍 Rechercher par CV"):
         location_filter_cv = workplace_city_cv or department_cv or None
         params = {"top_n": top_n_cv}
@@ -123,6 +128,8 @@ with tab2:
             params["contract_type"] = contract_type_cv
         if location_filter_cv:
             params["workplace_city"] = location_filter_cv
+
+        params["model"] = model_cv
 
         with st.spinner("Analyse du CV en cours..."):
             r = requests.post(
