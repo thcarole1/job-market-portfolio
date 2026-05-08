@@ -4,6 +4,7 @@ from enum import Enum
 
 from services.ml.src.predict import recommend_offers
 from services.ml.src.predict_sbert import recommend_offers_sbert
+from services.ml.src.predict_hybrid import recommend_offers_hybrid
 from services.ingestion.src.loaders.mongo_loader import Mongoloader
 from services.ml.src.cv_parser import CVParser
 
@@ -48,18 +49,21 @@ def get_offer(q:QueryRequest,model: str = "tfidf"):
     # Recherche des offres similaires à la requête utilisateur
     if model == "sbert":
         top_offres = recommend_offers_sbert(q.query, q.top_n, filtered_ids)
+    elif model == "hybrid":
+        top_offres = recommend_offers_hybrid(q.query, q.top_n, filtered_ids)
     else:
         top_offres = recommend_offers(q.query, q.top_n, filtered_ids)
 
-    scores_by_id = {o["id"]: o["score"] for o in top_offres}
     offres_trouvees = []
     for offre in top_offres:
         result = loader.db["offres_normalisees"].find_one({'id' : offre.get('id')}, {'_id' : 0})
         if not result:
             continue # offre non trouvée → on passe à la suivante
-        else:
-            result["score"] = scores_by_id[result["id"]]  # ← ajoute le score à l'offre
-            offres_trouvees.append(result)
+        # ← score_final pour hybrid, score pour tfidf/sbert
+        result["score"] = offre.get("score_final") or offre.get("score")
+        if model == "hybrid":
+            result["detail"] = offre.get("detail")
+        offres_trouvees.append(result)
 
     return offres_trouvees
 
@@ -97,17 +101,19 @@ async def recommend_from_cv(
         # Remplace l'appel à recommend_offers par :
     if model == "sbert":
         top_offres = recommend_offers_sbert(cv_parsed, top_n, filtered_ids)
+    elif model == "hybrid":
+        top_offres = recommend_offers_hybrid(cv_parsed, top_n, filtered_ids)
     else:
         top_offres = recommend_offers(cv_parsed, top_n, filtered_ids)
 
-    scores_by_id = {o["id"]: o["score"] for o in top_offres}
     offres_trouvees = []
     for offre in top_offres:
         result = loader.db["offres_normalisees"].find_one({'id' : offre.get('id')}, {'_id' : 0})
         if not result:
             continue # offre non trouvée → on passe à la suivante
-        else:
-            result["score"] = scores_by_id[result["id"]]  # ← ajoute le score à l'offre
-            offres_trouvees.append(result)
+        result["score"] = offre.get("score_final") or offre.get("score")
+        if model == "hybrid":
+            result["detail"] = offre.get("detail")
+        offres_trouvees.append(result)
 
     return offres_trouvees

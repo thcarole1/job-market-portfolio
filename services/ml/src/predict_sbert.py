@@ -6,8 +6,10 @@ from sentence_transformers import SentenceTransformer
 
 logger = logging.getLogger(__name__)
 
+from pathlib import Path
+ROOT = Path(__file__).resolve().parents[3]
+MODELS_DIR = ROOT / "services/ml/models"
 MODEL_NAME = "paraphrase-multilingual-mpnet-base-v2"
-MODELS_DIR = "services/ml/models"
 
 def recommend_offers_sbert(cv_text: str, top_n: int = 10, offer_ids: list = None) -> list:
     """
