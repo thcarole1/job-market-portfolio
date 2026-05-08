@@ -24,6 +24,16 @@ def _display_results(results):
             col2.metric("Expérience", offre.get('experience_label') or 'N/A')
             col3.metric("Postes", offre.get('number_of_positions') or 'N/A')
 
+            if offre.get("detail"):
+                st.markdown("**Détail du score hybride :**")
+                detail = offre["detail"]
+                col1, col2, col3, col4, col5 = st.columns(5)
+                col1.metric("SBERT", f"{detail.get('sbert', 0):.2f}")
+                col2.metric("Compétences", f"{detail.get('competences', 0):.2f}")
+                col3.metric("Expérience", f"{detail.get('experience', 0):.2f}")
+                col4.metric("Localisation", f"{detail.get('localisation', 0):.2f}")
+                col5.metric("Formation", f"{detail.get('formation', 0):.2f}")
+
             st.markdown("---")
             col1, col2 = st.columns(2)
             with col1:
@@ -87,8 +97,8 @@ with tab1:
             department = st.text_input("Ou département", placeholder="Ex: 78")
         with col4:
             top_n = st.slider("Nombre de résultats", 1, 50, 10)
-        model = st.selectbox("Modèle ML", ["tfidf", "sbert"],
-                    help="TF-IDF = baseline rapide, SBERT = sémantique")
+        model = st.selectbox("Modèle ML", ["tfidf", "sbert", "hybrid"],
+                     help="TF-IDF = baseline, SBERT = sémantique, Hybrid = multicritères")
         submitted = st.form_submit_button("🔍 Rechercher")
 
     if submitted and query:
@@ -118,8 +128,8 @@ with tab2:
     with col4:
         top_n_cv = st.slider("Nombre de résultats", 1, 50, 10, key="cv_topn")
 
-    model_cv = st.selectbox("Modèle ML", ["tfidf", "sbert"], key="cv_model",
-                        help="TF-IDF = baseline rapide, SBERT = sémantique")
+    model_cv = st.selectbox("Modèle ML", ["tfidf", "sbert", "hybrid"], key="cv_model",
+                        help="TF-IDF = baseline, SBERT = sémantique, Hybrid = multicritères")
 
     if uploaded_file and st.button("🔍 Rechercher par CV"):
         location_filter_cv = workplace_city_cv or department_cv or None

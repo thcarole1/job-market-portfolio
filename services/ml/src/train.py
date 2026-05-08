@@ -4,9 +4,12 @@ from pathlib import Path
 import logging
 logger = logging.getLogger(__name__)
 
-
 from services.ingestion.src.loaders.mongo_loader import Mongoloader
 from services.ml.src.features import build_offer_text
+
+from pathlib import Path
+ROOT = Path(__file__).resolve().parents[3]
+MODELS_DIR = ROOT / "services/ml/models"
 
 def train_tfidf(output_path: str = "services/ml/models") :
     #1. Récupère toutes les offres normalisées depuis MongoDB
@@ -26,17 +29,16 @@ def train_tfidf(output_path: str = "services/ml/models") :
     logger.info(f"Fin de l'entraînement du tfidf vectorizer.")
 
     #4. Sauvegarde le vectorizer et la matrice TF-IDF en .pkl
-    output_path = Path(output_path)
-    output_path.mkdir(parents=True, exist_ok=True)  # ← crée le dossier si absent
+    MODELS_DIR.mkdir(parents=True, exist_ok=True)  # ← crée le dossier si absent
 
-    with open(f"{output_path}/tfidf_vectorizer.pkl", "wb") as f:
+    with open(f"{MODELS_DIR}/tfidf_vectorizer.pkl", "wb") as f:
         pickle.dump(vectorizer, f)
     logger.info(f"Sauvegarde du vectorizer réussie.")
 
-    with open(f"{output_path}/tfidf_matrix.pkl", "wb") as f:
+    with open(f"{MODELS_DIR}/tfidf_matrix.pkl", "wb") as f:
         pickle.dump(tfidf_matrix, f)
     logger.info(f"Sauvegarde de la matrice tfidf réussie.")
 
-    with open(f"{output_path}/tfidf_ids.pkl", "wb") as f:
+    with open(f"{MODELS_DIR}/tfidf_ids.pkl", "wb") as f:
         pickle.dump(ids, f)
     logger.info(f"Sauvegarde des identifiants réussie.")
