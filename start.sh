@@ -69,3 +69,5 @@ streamlit run services/frontend/src/main.py
 
 # Nettoyage à l'arrêt
 trap "kill $API_PID; docker compose stop" EXIT
+
+#Lancement : ./start.sh
