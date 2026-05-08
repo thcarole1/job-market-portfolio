@@ -3,6 +3,7 @@ from pydantic import BaseModel,Field
 from enum import Enum
 
 from services.ml.src.predict import recommend_offers
+from services.ml.src.predict_sbert import recommend_offers_sbert
 from services.ingestion.src.loaders.mongo_loader import Mongoloader
 from services.ml.src.cv_parser import CVParser
 
@@ -23,7 +24,7 @@ class QueryRequest(BaseModel):
     source: str | None = Field(None, description="Source de l'offre : France_Travail, wttj...")
 
 @router.post("/")
-def get_offer(q:QueryRequest):
+def get_offer(q:QueryRequest,model: str = "tfidf"):
     '''POST /recommend/query  — recommande des offres à partir d'un texte + filtres'''
     # On filtre d'abord (si filtre existe) et seulement ensuite on fait le scoring
     query_filter = {}
@@ -45,7 +46,11 @@ def get_offer(q:QueryRequest):
             return []  # ← aucun résultat pour ce filtre
 
     # Recherche des offres similaires à la requête utilisateur
-    top_offres = recommend_offers(q.query, q.top_n,filtered_ids)
+    if model == "sbert":
+        top_offres = recommend_offers_sbert(q.query, q.top_n, filtered_ids)
+    else:
+        top_offres = recommend_offers(q.query, q.top_n, filtered_ids)
+
     scores_by_id = {o["id"]: o["score"] for o in top_offres}
     offres_trouvees = []
     for offre in top_offres:
@@ -64,7 +69,8 @@ async def recommend_from_cv(
     file: UploadFile = File(...),
     top_n: int = 10,
     contract_type: str | None = None,
-    workplace_city: str | None = None
+    workplace_city: str | None = None,
+    model: str = "tfidf"
 ):
     if file.filename.endswith(".pdf"):
         cv_bytes = await file.read()
@@ -88,7 +94,12 @@ async def recommend_from_cv(
             return []  # ← aucun résultat pour ce filtre
 
     # Recherche des offres similaires à la requête utilisateur
-    top_offres = recommend_offers(cv_parsed, top_n,filtered_ids)
+        # Remplace l'appel à recommend_offers par :
+    if model == "sbert":
+        top_offres = recommend_offers_sbert(cv_parsed, top_n, filtered_ids)
+    else:
+        top_offres = recommend_offers(cv_parsed, top_n, filtered_ids)
+
     scores_by_id = {o["id"]: o["score"] for o in top_offres}
     offres_trouvees = []
     for offre in top_offres:
