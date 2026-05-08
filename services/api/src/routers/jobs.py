@@ -2,9 +2,11 @@ from fastapi import APIRouter,HTTPException
 from pydantic import BaseModel,Field
 from enum import Enum
 from services.ingestion.src.loaders.mongo_loader import Mongoloader
+from services.ingestion.src.loaders.elastic_loader import Elasticloader
 
 router = APIRouter()
 loader = Mongoloader()
+es_loader = Elasticloader()
 
 @router.get("/")
 def get_offers(
@@ -13,6 +15,13 @@ def get_offers(
     limit: int = 50,
     skip: int = 0
 ):
+    '''
+    GET /offers/ — liste des offres avec filtres.
+    Utilise Elasticsearch pour la recherche full-text,
+    MongoDB pour la pagination simple sans filtre.
+    '''
+
+
     '''
     Explication :
 
@@ -25,16 +34,59 @@ def get_offers(
     .skip(0).limit(50)   # page 1
     .skip(50).limit(50)  # page 2
     '''
-    # On filtre d'abord (si filtre existe)
-    query_filter = {}
-    if contract_type:
-        query_filter["contract_type"] = {"$regex": contract_type, "$options": "i"}
-    if workplace_city:
-        query_filter["workplace_label"] = {"$regex": workplace_city, "$options": "i"}
 
-    offres = list(loader.db["offres_normalisees"].find(query_filter, {"_id": 0}).skip(skip).limit(limit))
+        # ── Avec filtres → Elasticsearch ──────────────────
+    if contract_type or workplace_city:
+        must_clauses = []
+
+        if contract_type:
+            must_clauses.append({
+                "match": {
+                    "contract_type": {
+                        "query": contract_type,
+                        "fuzziness": "AUTO"  # tolère les fautes de frappe
+                    }
+                }
+            })
+
+        if workplace_city:
+            must_clauses.append({
+                "match": {
+                    "workplace_label": {
+                        "query": workplace_city,
+                        "fuzziness": "AUTO"
+                    }
+                }
+            })
+
+        query = {"bool": {"must": must_clauses}}
+
+        res = es_loader.es.search(
+            index=es_loader.index_name,
+            body={
+                "query": query,
+                "from": skip,
+                "size": limit
+            }
+        )
+
+        ids = [hit["_source"]["id"] for hit in res["hits"]["hits"]]
+
+        if not ids:
+            return []
+
+        # Récupère les offres complètes depuis MongoDB
+        offres = list(loader.db["offres_normalisees"].find(
+            {"id": {"$in": ids}}, {"_id": 0}
+        ))
+        return offres
+
+
+    # ── Sans filtre → MongoDB simple ──────────────────
+    offres = list(loader.db["offres_normalisees"].find(
+        {}, {"_id": 0}
+    ).skip(skip).limit(limit))
     return offres
-
 
 @router.get("/{id}")
 def get_offer(id: str):
