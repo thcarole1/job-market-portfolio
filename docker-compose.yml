@@ -11,9 +11,13 @@ services:
         mongodb:
           condition: service_started
         elasticsearch:
-          condition: service_started
+          condition: service_healthy
       networks:
         - job-market-backend-portfolio
+      environment:
+        - MONGO_HOST=mongodb
+        - ELASTIC_HOST=elasticsearch
+        - POSTGRES_HOST=postgresql
 
   ml:
       build:
@@ -31,6 +35,9 @@ services:
           condition: service_started
       networks:
         - job-market-backend-portfolio
+      environment:
+        - MONGO_HOST=mongodb
+        - ELASTIC_HOST=elasticsearch
 
   api:
       build:
@@ -53,6 +60,10 @@ services:
       networks:
         - job-market-backend-portfolio
         - job-market-frontend-portfolio
+      environment:
+        - MONGO_HOST=mongodb
+        - ELASTIC_HOST=elasticsearch
+        - POSTGRES_HOST=postgresql
 
 
  # ── Bases de données ──────────────────────────────────────
@@ -100,6 +111,12 @@ services:
     networks:
       - job-market-backend-portfolio
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\":\"green\"\\|\"status\":\"yellow\"'"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
 
 
 # ── Interfaces d'administration ───────────────────────────
