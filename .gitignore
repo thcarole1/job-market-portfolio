@@ -41,3 +41,4 @@ Thumbs.db
 # Notebooks d'exploration
 notebooks/
 .ipynb_checkpoints/
+services/ml/models/
