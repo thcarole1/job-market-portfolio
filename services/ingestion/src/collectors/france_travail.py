@@ -35,6 +35,7 @@ class FranceTravailCollector:
 
     def _search_offers(self,
                        mots_cles = None,
+                       rome_code=None,
                        range_str = "0-149"):
         """Recherche des offres d'emploi via l'API FranceTravail.
         Retourne un dictionnaire global avec une liste d'offres et d'autres informations (filtres possibles)"""
@@ -54,6 +55,10 @@ class FranceTravailCollector:
                 "range":      range_str,
                 "sort":       "1"
             }
+
+            if rome_code:
+                params["codeROME"] = rome_code
+
             response = requests.get(url, headers=headers, params=params)
             response.raise_for_status()
 
@@ -68,8 +73,13 @@ class FranceTravailCollector:
             logger.error(f"Erreur HTTP : {e}")
             raise
 
-    def collect_all_offers(self,mots_cles="data engineer"):
-        """Recherche de toutes les offres d'emploi via l'API FranceTravail."""
+    def collect_all_offers(self,mots_cles=None, rome_codes=None):
+        """
+        Recherche de toutes les offres d'emploi via l'API FranceTravail.
+        - mots_cles : filtre par mots clés
+        - rome_codes : liste de codes ROME à collecter
+        Si rome_codes est fourni, boucle sur chaque code ROME.
+        """
 
         logger.info("Début de l'opération de récupération de toutes les offres France Travail")
 
@@ -77,16 +87,30 @@ class FranceTravailCollector:
             start, stop, step = 0, 3149, 150
             ranges = [f"{start}-{min(start+step-1, stop)}" for start in range (start, stop, step)]
             offres = []
+            ids_collectes = set()  # ← évite les doublons entre codes ROME
 
-            for range_unit in ranges :
-                resultats = self._search_offers(mots_cles = mots_cles,range_str=range_unit)
-                if not resultats["resultats"]:  # liste vide → on arrête
-                    logger.info(f"Plus d'offres à partir du range {range_unit}, arrêt de la collecte")
-                    break
-                offres.extend(resultats['resultats'])
+            codes = rome_codes if rome_codes else [None]
 
-            logger.info("Opération de récupération de toutes les offres réussie")
+            for code in codes:
+                logger.info(f"Collecte pour le code ROME : {code or 'tous'}")
+                for range_unit in ranges:
+                    resultats = self._search_offers(
+                        mots_cles=mots_cles,
+                        rome_code=code,
+                        range_str=range_unit
+                    )
+                    if not resultats["resultats"]:
+                        logger.info(f"Plus d'offres à partir du range {range_unit}, arrêt de la collecte")
+                        break
+                    # Déduplique par id
+                    for offre in resultats["resultats"]:
+                        if offre["id"] not in ids_collectes:
+                            offres.append(offre)
+                            ids_collectes.add(offre["id"])
+
+            logger.info(f"Opération de récupération de toutes les offres réussie — {len(offres)} offres collectées")
             return offres
+
         except requests.exceptions.HTTPError as e:
             logger.error(f"Erreur HTTP : {e}")
             raise

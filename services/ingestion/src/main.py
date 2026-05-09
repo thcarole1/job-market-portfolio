@@ -10,7 +10,24 @@ from services.ingestion.src.utils.normalizer import normalize_france_travail
 if __name__ == "__main__":
     #1. Collecte France Travail
     collector = FranceTravailCollector()
-    offres_brutes = collector.collect_all_offers(mots_cles="data engineer")
+
+    ROME_CODES = [
+                # Data & IA
+                "M1811",  # Data Engineer
+                "M1405",  # Data Scientist
+                "M1403",  # Études statistiques
+                "M1805",  # Développement informatique
+                # Connexes
+                "M1802",  # Support systèmes d'information
+                "M1806",  # Conseil SI
+                "M1807",  # Architecture informatique
+                # Autres secteurs représentatifs
+                "D1507",  # Grande distribution
+                "K2204",  # Aide soignant
+                "G1703",  # Restauration
+                ]
+
+    offres_brutes = collector.collect_all_offers(rome_codes=ROME_CODES)
     logger.info(f"{len(offres_brutes)} offres collectées")
 
     #2. Insertion brutes dans MongoDB
