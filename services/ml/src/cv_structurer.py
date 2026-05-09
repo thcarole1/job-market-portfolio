@@ -1,29 +1,14 @@
-import sys
-sys.path.insert(0, ".")
 import re
 import logging
 
 logger = logging.getLogger(__name__)
 
-# ── Constantes ────────────────────────────────────────
-# Liste de compétences techniques à détecter
-COMPETENCES_CONNUES = [
-    "Python", "SQL", "Scala", "Java", "R",
-    "Spark", "PySpark", "Kafka", "Hadoop", "Airflow",
-    "MongoDB", "PostgreSQL", "Elasticsearch", "Redis",
-    "AWS", "GCP", "Azure", "Docker", "Kubernetes",
-    "dbt", "Snowflake", "Databricks", "Tableau",
-    "Power BI", "Grafana", "Kibana", "FastAPI",
-    "Git", "CI/CD", "Terraform", "MLflow",
-    "pandas", "numpy", "scikit-learn", "TensorFlow",
-    "PyTorch", "HuggingFace", "LangChain"
-]
-
-#Niveaux des formations à mettre dans l'ordre d'obtention ABSOLUMENT
-NIVEAUX_FORMATION = ["Bac", "Bac+2", "Bac+3", "Licence", "Bachelor",
-                     "Bac+5", "Master", "Ingénieur", "Doctorat", "PhD"]
-
-LANGUES_PRATIQUEES = ["Français","Francais","Anglais", "Espagnol", "Allemand"]
+from services.ml.src.constants import (
+    COMPETENCES_CONNUES,
+    NIVEAUX_FORMATION,
+    LANGUES_PRATIQUEES,
+    VILLES_CONNUES
+)
 
 PATTERNS_EXPERIENCE = [
     r'(\d+)\s*an[s]?',
@@ -54,12 +39,6 @@ MOTS_EXPERIENCE = ["engineer", "ingénieur", "développeur", "consultant",
 
 MOTS_FORMATION = ["master", "licence", "bachelor", "bac", "université",
                   "université", "école", "diplôme", "formation", "cursus"]
-
-VILLES_CONNUES = [
-    "Paris", "Lyon", "Marseille", "Toulouse",
-    "Bordeaux", "Nantes", "Lille", "Strasbourg",
-    "Rennes", "Grenoble", "Montpellier", "Nice"
-]
 
 class CVStructurer:
     def extract(self, cv_text: str) -> dict:
