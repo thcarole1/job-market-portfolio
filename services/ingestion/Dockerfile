@@ -16,6 +16,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copier tout le code du projet
 COPY . .
 
+# PYTHONPATH — permet les imports depuis la racine du projet
+ENV PYTHONPATH=/app
+
 # Créer et basculer vers un utilisateur non-root
 RUN adduser --disabled-password --gecos "" appuser
 USER appuser
