@@ -188,6 +188,8 @@ class HybridScorer:
         formation_cv      = cv_structured.get("formation", "Non précisé")
         niveau_cv         = FORMATION_SCORE.get(formation_cv, 0)
         formation_requise = offre.get("formation_requise") or ""
+        # Normalise "Bac +4" → "Bac+4", "bac + 5" → "Bac+5"
+        formation_requise_normalized = re.sub(r'Bac\s*\+', 'Bac+', formation_requise, flags=re.IGNORECASE)
 
         # Données absentes → pas de pénalité
         if not formation_requise:
@@ -202,7 +204,7 @@ class HybridScorer:
         for formation, niveau in sorted(
             FORMATION_SCORE.items(), key=lambda x: x[1], reverse=True
         ):
-            if formation.lower() in formation_requise.lower():
+            if formation.lower() in formation_requise_normalized.lower():
                 niveau_requis = niveau
                 break
 

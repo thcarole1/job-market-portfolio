@@ -51,12 +51,12 @@ services:
       volumes:
         - ml_models:/app/services/ml/models
       depends_on:
-        ml:
-          condition: service_completed_successfully
+        #ml:
+          #condition: service_completed_successfully
         mongodb:
           condition: service_started
         elasticsearch:
-          condition: service_started
+          condition: service_healthy
       networks:
         - job-market-backend-portfolio
         - job-market-frontend-portfolio
