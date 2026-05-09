@@ -6,6 +6,12 @@ from services.ml.src.features import build_offer_text
 
 logger = logging.getLogger(__name__)
 
+from services.ml.src.constants import (
+    COMPETENCES_CONNUES,
+    COORDS_VILLES,
+    FORMATION_SCORE
+)
+
 # ── Pondérations ──────────────────────────────────────
 POIDS = {
     "sbert":        0.40,
@@ -15,44 +21,6 @@ POIDS = {
     "formation":    0.05
 }
 
-# ── Mapping formation → niveau numérique ──────────────
-FORMATION_SCORE = {
-    "Bac": 1, "Bac+2": 2, "Bac+3": 3, "Licence": 3,
-    "Bachelor": 3, "Bac+4": 4, "Bac+5": 5, "Master": 5,
-    "Ingénieur": 5, "Doctorat": 6, "PhD": 6,
-    "Non précisé": 0
-}
-
-# ── Compétences techniques connues ────────────────────
-COMPETENCES_CONNUES = [
-    "Python", "SQL", "Scala", "Java", "R",
-    "Spark", "PySpark", "Kafka", "Hadoop", "Airflow",
-    "MongoDB", "PostgreSQL", "Elasticsearch", "Redis",
-    "AWS", "GCP", "Azure", "Docker", "Kubernetes",
-    "dbt", "Snowflake", "Databricks", "Tableau",
-    "Power BI", "Grafana", "Kibana", "FastAPI",
-    "Git", "CI/CD", "Terraform", "MLflow",
-    "pandas", "numpy", "scikit-learn", "TensorFlow",
-    "PyTorch", "HuggingFace", "LangChain"
-]
-
-# ── Coordonnées GPS des grandes villes ────────────────
-COORDS_VILLES = {
-    "Paris":       (48.8566,  2.3522),
-    "Lyon":        (45.7640,  4.8357),
-    "Marseille":   (43.2965,  5.3698),
-    "Toulouse":    (43.6047,  1.4442),
-    "Bordeaux":    (44.8378, -0.5792),
-    "Nantes":      (47.2184, -1.5536),
-    "Lille":       (50.6292,  3.0573),
-    "Strasbourg":  (48.5734,  7.7521),
-    "Rennes":      (48.1173, -1.6778),
-    "Grenoble":    (45.1885,  5.7245),
-    "Montpellier": (43.6108,  3.8767),
-    "Nice":        (43.7102,  7.2620)
-}
-
-
 def _haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Calcule la distance en km entre deux points GPS (formule de Haversine)."""
     R = 6371
@@ -61,6 +29,10 @@ def _haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     dlon = lon2 - lon1
     a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
     return round(2 * R * atan2(sqrt(a), sqrt(1 - a)), 1)
+
+def _normalize(c: str) -> str:
+    """Normalise une compétence pour comparaison : minuscules, sans espaces."""
+    return c.lower().replace(" ", "").replace("-", "")
 
 
 class HybridScorer:
@@ -121,9 +93,16 @@ class HybridScorer:
                 "manquantes": []
             }
 
-        match      = sorted(competences_cv & competences_offre_set)
-        manquantes = sorted(competences_offre_set - competences_cv)
-        score      = len(match) / len(competences_offre_set)
+        # Match normalisé — "Power BI" == "PowerBI"
+        match = sorted([
+            c for c in competences_cv
+            if any(_normalize(c) == _normalize(o) for o in competences_offre_set)
+        ])
+        manquantes = sorted([
+            c for c in competences_offre_set
+            if not any(_normalize(c) == _normalize(cv) for cv in competences_cv)
+        ])
+        score = len(match) / len(competences_offre_set) if competences_offre_set else 0.0
 
         return {
             "score":      round(score, 3),

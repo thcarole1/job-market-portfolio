@@ -6,6 +6,16 @@ API_URL = "http://localhost:8000"
 st.set_page_config(page_title="Recherche", page_icon="🔍", layout="wide")
 st.title("🔍 Recherche d'offres par profil")
 
+st.markdown("""
+    <style>
+    div[data-testid="stExpander"] {
+        background-color: #f0f4ff;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        margin-bottom: 8px;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
 def _display_results(results):
     if len(results) == 0:
@@ -14,10 +24,11 @@ def _display_results(results):
         return
 
     st.success(f"{len(results)} offres trouvées")
+
     st.markdown("---")
 
     for offre in results:
-        with st.expander(f"**{offre.get('title', 'N/A')}** — {offre.get('workplace_label', 'N/A')} — Score: {offre.get('score', 0):.3f}"):
+        with st.expander(f"**{offre.get('title', 'N/A')}** — {offre.get('workplace_label', 'N/A')} — Score: {offre.get('score', 0):.3f} — Réf: {offre.get('id', 'N/A')}"):
 
             col1, col2, col3 = st.columns(3)
             col1.metric("Contrat", offre.get('contract_type_label') or 'N/A')
@@ -25,32 +36,84 @@ def _display_results(results):
             col3.metric("Postes", offre.get('number_of_positions') or 'N/A')
 
             if offre.get("detail"):
-                st.markdown("**Détail du score hybride :**")
                 detail = offre["detail"]
-                col1, col2, col3, col4, col5 = st.columns(5)
-                col1.metric("SBERT", f"{detail.get('sbert', 0):.2f}")
-                col2.metric("Compétences", f"{detail.get('competences', 0):.2f}")
-                col3.metric("Expérience", f"{detail.get('experience', 0):.2f}")
-                col4.metric("Localisation", f"{detail.get('localisation', 0):.2f}")
-                col5.metric("Formation", f"{detail.get('formation', 0):.2f}")
+                st.markdown("### 📊 Analyse de compatibilité")
+
+                # ── Score hybride global ──────────────────────────
+                st.metric("🏆 Score hybride global", f"{offre.get('score', 0):.3f} / 1.000")
+                st.markdown("---")
+
+                # ── SBERT ─────────────────────────────────────────
+                st.markdown("**🤖 Similarité sémantique (SBERT)**")
+                st.metric("Score SBERT", f"{detail.get('sbert', 0):.2f}")
+                st.markdown("---")
+
+                # ── Compétences ───────────────────────────────────
+                comp = detail.get("competences", {})
+                if isinstance(comp, dict):
+                    st.markdown("**🛠️ Compétences**")
+                    st.metric("Score compétences", f"{comp.get('score', 0):.2f}")
+                    if comp.get("offre"):
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.markdown("✅ **Maîtrisées**")
+                            for c in comp.get("match", []):
+                                st.markdown(f"- {c}")
+                        with col2:
+                            st.markdown("❌ **Manquantes**")
+                            manquantes = comp.get("manquantes", [])
+                            if manquantes:
+                                for c in manquantes:
+                                    st.markdown(f"- {c}")
+                            else:
+                                st.markdown("*Aucune — profil complet* 🎉")
+                st.markdown("---")
+
+                # ── Expérience ────────────────────────────────────
+                exp = detail.get("experience", {})
+                if isinstance(exp, dict):
+                    st.markdown("**📅 Expérience**")
+                    st.metric("Score expérience", f"{exp.get('score', 0):.2f}")
+                    if exp.get("offre") is not None:
+                        col1, col2, col3 = st.columns(3)
+                        col1.metric("CV",       f"{exp.get('cv', 0)} an(s)")
+                        col2.metric("Requise",  f"{exp.get('offre', 0)} an(s)")
+                        col3.metric("Manquante", f"{exp.get('manquantes', 0)} an(s)")
+                    else:
+                        st.info("Expérience non précisée dans l'offre")
+                st.markdown("---")
+
+                # ── Localisation ──────────────────────────────────
+                loc = detail.get("localisation", {})
+                if isinstance(loc, dict):
+                    st.markdown("**📍 Localisation**")
+                    st.metric("Score localisation", f"{loc.get('score', 0):.2f}")
+                    col1, col2, col3 = st.columns(3)
+                    col1.metric("CV",     loc.get("cv", "N/A"))
+                    col2.metric("Offre",  loc.get("offre", "N/A"))
+                    distance = loc.get("distance_km")
+                    col3.metric("Distance", f"{distance} km" if distance is not None else "N/A")
+                st.markdown("---")
+
+                # ── Formation ─────────────────────────────────────
+                form = detail.get("formation", {})
+                if isinstance(form, dict):
+                    st.markdown("**🎓 Formation**")
+                    st.metric("Score formation", f"{form.get('score', 0):.2f}")
+                    col1, col2 = st.columns(2)
+                    col1.metric("CV",      form.get("cv", "N/A"))
+                    col2.metric("Requise", form.get("offre", "N/A"))
+                st.markdown("---")
 
             st.markdown("---")
-            col1, col2 = st.columns(2)
-            with col1:
-                st.subheader("Informations")
-                st.write(f"**Entreprise:** {offre.get('company_name') or 'N/A'}")
-                st.write(f"**Lieu:** {offre.get('workplace_label') or 'N/A'}")
-                st.write(f"**Salaire:** {offre.get('salary_label') or 'N/A'}")
-                st.write(f"**Secteur:** {offre.get('sector_activity_label') or 'N/A'}")
-                st.write(f"**Source:** {offre.get('source') or 'N/A'}")
-                st.write(f"**Publié le:** {(offre.get('creation_date') or 'N/A')[:10]}")
-            with col2:
-                st.subheader("Compétences requises")
-                for c in offre.get('competences', []):
-                    st.write(f"- {c.get('libelle')}")
-                st.subheader("Langues")
-                for l in offre.get('languages', []):
-                    st.write(f"- {l.get('libelle')} ({l.get('exigence')})")
+
+            st.subheader("Informations")
+            st.write(f"**Entreprise:** {offre.get('company_name') or 'N/A'}")
+            st.write(f"**Lieu:** {offre.get('workplace_label') or 'N/A'}")
+            st.write(f"**Salaire:** {offre.get('salary_label') or 'N/A'}")
+            st.write(f"**Secteur:** {offre.get('sector_activity_label') or 'N/A'}")
+            st.write(f"**Source:** {offre.get('source') or 'N/A'}")
+            st.write(f"**Publié le:** {(offre.get('creation_date') or 'N/A')[:10]}")
 
             st.markdown("---")
             st.subheader("Description complète")
@@ -110,8 +173,13 @@ with tab1:
             "workplace_city": location_filter
         }
         with st.spinner("Recherche en cours..."):
+            import time
+            start = time.time()
             r = requests.post(f"{API_URL}/recommend/", json=payload, params={"model": model})
+            elapsed = time.time() - start
             results = r.json()
+
+        st.info(f"⏱️ Temps de recherche ({model}) : **{elapsed:.2f} secondes**")
         _display_results(results)
 
 # ── Tab 2 : Upload CV ─────────────────────────────────
@@ -138,14 +206,18 @@ with tab2:
             params["contract_type"] = contract_type_cv
         if location_filter_cv:
             params["workplace_city"] = location_filter_cv
-
         params["model"] = model_cv
 
         with st.spinner("Analyse du CV en cours..."):
+            import time
+            start = time.time()
             r = requests.post(
                 f"{API_URL}/recommend/cv",
                 files={"file": (uploaded_file.name, uploaded_file.getvalue(), "application/pdf")},
                 params=params
             )
+            elapsed = time.time() - start
             results = r.json()
+
+        st.info(f"⏱️ Temps de recherche ({model_cv}) : **{elapsed:.2f} secondes**")
         _display_results(results)

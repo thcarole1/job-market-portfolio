@@ -36,3 +36,8 @@ try:
         col1.metric("Statut API", "❌ Hors ligne")
 except:
     col1.metric("Statut API", "❌ Hors ligne")
+
+
+'''
+streamlit run services/frontend/src/main.py
+'''
