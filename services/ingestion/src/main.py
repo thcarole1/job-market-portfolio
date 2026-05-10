@@ -6,40 +6,42 @@ from services.ingestion.src.collectors.france_travail import FranceTravailCollec
 from services.ingestion.src.loaders.mongo_loader import Mongoloader
 from services.ingestion.src.loaders.elastic_loader import Elasticloader
 from services.ingestion.src.utils.normalizer import normalize_france_travail
+from services.ml.src.encoder import encode_offer, MODEL_NAME
 
 if __name__ == "__main__":
-    #1. Collecte France Travail
+
+    # 1. Collecte France Travail
     collector = FranceTravailCollector()
 
     ROME_CODES = [
-                # Data & IA
-                "M1811",  # Data Engineer
-                "M1405",  # Data Scientist
-                "M1403",  # Études statistiques
-                "M1805",  # Développement informatique
-                # Connexes
-                "M1802",  # Support systèmes d'information
-                "M1806",  # Conseil SI
-                "M1807",  # Architecture informatique
-                # Autres secteurs représentatifs
-                "D1507",  # Grande distribution
-                "K2204",  # Aide soignant
-                "G1703",  # Restauration
-                ]
+    "M1811",  # Data Engineer — suffisant pour tester
+    "M1405",  # Data Scientist
+    ]
 
     offres_brutes = collector.collect_all_offers(rome_codes=ROME_CODES)
     logger.info(f"{len(offres_brutes)} offres collectées")
 
-    #2. Insertion brutes dans MongoDB
+    # 2. Insertion brutes dans MongoDB
     mongo_loader = Mongoloader()
-    logger.info(f"Insertion des offres brutes dans MongoDB...")
+    logger.info("Insertion des offres brutes dans MongoDB...")
     for offre in offres_brutes:
         mongo_loader.insert_raw_offer(offer=offre)
 
-    #3. Normalisation + #4. Insertion normalisées dans MongoDB + #5. Indexation Elasticsearch
+    # 3. Normalisation
+    # 4. Encoding SBERT
+    # 5. Insertion normalisées dans MongoDB
+    # 6. Indexation Elasticsearch
     elastic_loader = Elasticloader()
-    logger.info(f"Normalisation des offres brutes, Insertion des offres normalisées dans MongoDB et Indexation des offres normalisées dasn ElasticSearch...")
+    logger.info("Normalisation, encoding SBERT et indexation des offres...")
+
     for offre in offres_brutes:
         offre_normalisee = normalize_france_travail(offre)
+
+        # Calcul de l'embedding SBERT
+        offre_normalisee["embedding"]       = encode_offer(offre_normalisee)
+        offre_normalisee["embedding_model"] = MODEL_NAME
+
         mongo_loader.insert_normalized_offer(offer=offre_normalisee)
         elastic_loader.index_offer(offer=offre_normalisee)
+
+    logger.info("Pipeline d'ingestion terminé ✅")

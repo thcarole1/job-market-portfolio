@@ -160,8 +160,9 @@ with tab1:
             department = st.text_input("Ou département", placeholder="Ex: 78")
         with col4:
             top_n = st.slider("Nombre de résultats", 1, 50, 10)
-        model = st.selectbox("Modèle ML", ["tfidf", "sbert", "hybrid"],
-                     help="TF-IDF = baseline, SBERT = sémantique, Hybrid = multicritères")
+        model = st.selectbox("Modèle ML", ["tfidf", "sbert", "hybrid", "knn"],
+                    help="TF-IDF = baseline, SBERT = sémantique, Hybrid = multicritères, KNN = vectoriel ES")
+
         submitted = st.form_submit_button("🔍 Rechercher")
 
     if submitted and query:
@@ -196,8 +197,8 @@ with tab2:
     with col4:
         top_n_cv = st.slider("Nombre de résultats", 1, 50, 10, key="cv_topn")
 
-    model_cv = st.selectbox("Modèle ML", ["tfidf", "sbert", "hybrid"], key="cv_model",
-                        help="TF-IDF = baseline, SBERT = sémantique, Hybrid = multicritères")
+    model_cv = st.selectbox("Modèle ML", ["tfidf", "sbert", "hybrid", "knn"], key="cv_model",
+                        help="TF-IDF = baseline, SBERT = sémantique, Hybrid = multicritères, KNN = vectoriel ES")
 
     if uploaded_file and st.button("🔍 Rechercher par CV"):
         location_filter_cv = workplace_city_cv or department_cv or None

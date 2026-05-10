@@ -1,44 +1,47 @@
-import numpy as np
-import pickle
 import logging
+import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
-from sentence_transformers import SentenceTransformer
+from services.ingestion.src.loaders.elastic_loader import Elasticloader
+from services.ml.src.encoder import get_model
 
 logger = logging.getLogger(__name__)
-
-from pathlib import Path
-ROOT = Path(__file__).resolve().parents[3]
-MODELS_DIR = ROOT / "services/ml/models"
-MODEL_NAME = "paraphrase-multilingual-mpnet-base-v2"
 
 def recommend_offers_sbert(cv_text: str, top_n: int = 10, offer_ids: list = None) -> list:
     """
     Recommande les offres les plus similaires au texte du CV
-    en utilisant les embeddings SBERT et la similarité cosinus.
+    en utilisant les embeddings SBERT stockés dans Elasticsearch.
     Retourne une liste de dicts {id, score} triés par score décroissant.
     """
-    logger.info("Chargement du modèle SBERT...")
-    model = SentenceTransformer(MODEL_NAME)
-
-    logger.info("Chargement des embeddings et ids...")
-    embeddings = np.load(f"{MODELS_DIR}/sbert_embeddings.npy")
-    with open(f"{MODELS_DIR}/sbert_ids.pkl", "rb") as f:
-        ids = pickle.load(f)
-
-    # Filtrage par ids si fourni
-    if offer_ids is not None:
-        indices = [i for i, id_ in enumerate(ids) if id_ in set(offer_ids)]
-        embeddings = embeddings[indices]
-        ids = [ids[i] for i in indices]
-        logger.info(f"Filtrage : {len(ids)} offres retenues")
-
-    logger.info("Encodage du CV...")
+    # Encode le CV
+    model = get_model()
     cv_embedding = model.encode([cv_text])
 
-    logger.info("Calcul des scores de similarité...")
-    scores = cosine_similarity(cv_embedding, embeddings)[0]
+    # Connexion ES
+    es_loader = Elasticloader()
 
-    logger.info(f"Récupération des {top_n} offres les plus similaires.")
+    # Récupère les offres avec leurs embeddings depuis ES
+    query_filter = {}
+    if offer_ids is not None:
+        query_filter = {"ids": {"values": offer_ids}}
+
+    body = {
+        "query": query_filter if query_filter else {"match_all": {}},
+        "_source": ["id", "embedding"],
+        "size": 10000  # récupère toutes les offres
+    }
+
+    res = es_loader.es.search(index=es_loader.index_name, body=body)
+    hits = res["hits"]["hits"]
+
+    if not hits:
+        return []
+
+    # Extrait ids et embeddings
+    ids        = [hit["_source"]["id"] for hit in hits]
+    embeddings = np.array([hit["_source"]["embedding"] for hit in hits])
+
+    # Calcul similarité cosinus
+    scores     = cosine_similarity(cv_embedding, embeddings)[0]
     top_indices = np.argsort(scores)[::-1][:top_n]
 
     return [{"id": ids[i], "score": float(scores[i])} for i in top_indices]
