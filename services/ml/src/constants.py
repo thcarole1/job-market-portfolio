@@ -9,13 +9,13 @@ COMPETENCES_CONNUES = [
     "pandas", "numpy", "scipy", "matplotlib", "seaborn",
     "plotly", "scikit-learn", "statsmodels", "xgboost",
     "LightGBM", "CatBoost", "TensorFlow", "Keras",
-    "PyTorch", "FastAI", "HuggingFace", "LangChain",
+    "PyTorch", "FastAI",
     "spaCy", "NLTK", "OpenCV", "Pillow",
     "FastAPI", "Flask", "Django", "Streamlit", "Gradio",
     "SQLAlchemy", "Pydantic", "Celery",
 
     # ── Big Data & traitement distribué ───────────────
-    "Spark", "PySpark", "Hadoop", "Hive", "HBase",
+    "Spark", "PySpark", "Hadoop", "Hive",
     "Flink", "Storm", "Beam", "Pig", "MapReduce",
     "Presto", "Trino", "Impala", "Drill",
     "Delta Lake", "Iceberg", "Hudi",
@@ -32,8 +32,8 @@ COMPETENCES_CONNUES = [
 
     # ── Bases de données relationnelles ───────────────
     "PostgreSQL", "MySQL", "MariaDB", "Oracle",
-    "SQL Server", "SQLite", "Redshift", "BigQuery",
-    "Snowflake", "Synapse", "Teradata", "Greenplum",
+    "SQL Server", "SQLite", "Redshift",
+    "Snowflake", "Teradata", "Greenplum",
 
     # ── Bases de données NoSQL ────────────────────────
     "MongoDB", "Cassandra", "HBase", "DynamoDB",
@@ -42,7 +42,7 @@ COMPETENCES_CONNUES = [
 
     # ── Cache & recherche ─────────────────────────────
     "Redis", "Memcached", "Elasticsearch",
-    "Opensearch", "Solr", "Kibana", "Logstash",
+    "Opensearch", "Solr", "Logstash",
 
     # ── Cloud ─────────────────────────────────────────
     "AWS", "GCP", "Azure", "OVH", "Scaleway",
@@ -64,15 +64,15 @@ COMPETENCES_CONNUES = [
 
     # ── Visualisation & BI ────────────────────────────
     "Power BI", "PowerBI", "Tableau", "Looker",
-    "Metabase", "Superset", "Grafana", "Kibana",
+    "Metabase", "Superset", "Kibana",
     "QlikView", "QlikSense", "MicroStrategy",
     "Cognos", "SSRS", "Data Studio", "Redash",
 
     # ── Machine Learning & MLOps ──────────────────────
-    "MLflow", "Weights & Biases", "Neptune",
+    "Weights & Biases", "Neptune",
     "DVC", "BentoML", "Seldon", "KFServing",
     "Ray", "Optuna", "Hyperopt", "AutoML",
-    "H2O", "DataRobot", "SageMaker",
+    "H2O", "DataRobot",
 
     # ── IA générative & LLM ───────────────────────────
     "LangChain", "LlamaIndex", "OpenAI", "GPT",
@@ -92,7 +92,7 @@ COMPETENCES_CONNUES = [
 
     # ── Méthodes & pratiques ──────────────────────────
     "ETL", "ELT", "DataOps", "MLOps", "DevOps",
-    "Agile", "Scrum", "Kanban", "TDD", "CI/CD",
+    "Agile", "Scrum", "Kanban", "TDD",
     "RGPD", "Data Mesh", "Data Lakehouse",
     "Data Warehouse", "Data Lake", "Data Vault",
 ]

@@ -81,7 +81,8 @@ class HybridScorer:
         """
         texte_offre = build_offer_text(offre).lower()
         competences_offre_set = set(
-            c for c in COMPETENCES_CONNUES if c.lower() in texte_offre
+            c for c in COMPETENCES_CONNUES
+            if re.search(r'\b' + re.escape(c) + r'\b', texte_offre, re.IGNORECASE)
         )
         competences_cv = set(cv_structured["competences"])
 
