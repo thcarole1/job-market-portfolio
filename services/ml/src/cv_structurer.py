@@ -59,9 +59,9 @@ class CVStructurer:
         """Détecte les compétences techniques connues dans le texte."""
         competences_list = []
         for competence in COMPETENCES_CONNUES:
-            if competence.lower() in text.lower():
+            if re.search(r'\b' + re.escape(competence) + r'\b', text, re.IGNORECASE):
                 competences_list.append(competence)
-        return competences_list
+        return list(dict.fromkeys(competences_list))
 
     def _extract_experience(self, text: str) -> int:
         """
