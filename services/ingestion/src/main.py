@@ -14,8 +14,64 @@ if __name__ == "__main__":
     collector = FranceTravailCollector()
 
     ROME_CODES = [
-    "M1811",  # Data Engineer — suffisant pour tester
-    "M1405",  # Data Scientist
+        # ── Data & IA ─────────────────────────────────────
+        "M1811",  # Data Engineer
+        "M1405",  # Data Scientist
+        "M1403",  # Études statistiques
+        "M1804",  # Études et développement de systèmes d'information
+        "M1805",  # Études et développement informatique
+        "M1810",  # Production et exploitation de systèmes d'information
+
+        # ── Informatique & SI ─────────────────────────────
+        "M1802",  # Expertise et support en systèmes d'information
+        "M1803",  # Direction des systèmes d'information
+        "M1806",  # Conseil et maîtrise d'ouvrage en SI
+        "M1807",  # Architecture et intégration informatique
+        "M1808",  # Exploitation de systèmes de communication
+        "M1809",  # Organisation des systèmes d'information
+
+        # ── Management & conseil ──────────────────────────
+        "M1402",  # Conseil en organisation et management
+        "M1404",  # Management et ingénierie études R&D
+        "M1205",  # Direction administrative et financière
+        "M1206",  # Management de projet
+
+        # ── Finance & comptabilité ────────────────────────
+        "M1202",  # Audit et contrôle comptables
+        "M1203",  # Comptabilité
+        "M1204",  # Finance et trésorerie
+        "M1207",  # Tenue de comptabilité
+
+        # ── Marketing & commercial ────────────────────────
+        "M1705",  # Marketing
+        "D1401",  # Commerce de détail
+        "D1402",  # Relation technico-commerciale
+        "D1403",  # Management en force de vente
+
+        # ── RH & formation ────────────────────────────────
+        "M1501",  # Assistanat en ressources humaines
+        "M1502",  # Développement des ressources humaines
+        "M1503",  # Management des ressources humaines
+
+        # ── Santé & social ────────────────────────────────
+        "K2204",  # Aide soignant
+        "K2102",  # Infirmier
+        "K1401",  # Travail social
+        "K2301",  # Médecin
+
+        # ── BTP & industrie ───────────────────────────────
+        "F1703",  # Maçonnerie
+        "H2902",  # Ingénierie en industrie
+        "H2503",  # Électromécanique
+
+        # ── Distribution & logistique ─────────────────────
+        "D1507",  # Mise en rayon
+        "N1301",  # Logistique
+        "N1303",  # Transport de marchandises
+
+        # ── Restauration & hôtellerie ─────────────────────
+        "G1703",  # Restauration
+        "G1601",  # Hôtellerie
     ]
 
     offres_brutes = collector.collect_all_offers(rome_codes=ROME_CODES)
