@@ -15,12 +15,22 @@ from services.ml.src.constants import (
 # ── Pondérations ──────────────────────────────────────
 
 POIDS = {
+    "sbert":        1.0,
+    "competences":  0,
+    "experience":   0,
+    "localisation": 0,
+    "formation":    0
+}
+
+'''
+POIDS = {
     "sbert":        0.40,
     "competences":  0.30,
     "experience":   0.15,
     "localisation": 0.10,
     "formation":    0.05
 }
+'''
 
 def _haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Calcule la distance en km entre deux points GPS (formule de Haversine)."""
