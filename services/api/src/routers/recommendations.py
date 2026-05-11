@@ -11,38 +11,38 @@ from services.ingestion.src.loaders.elastic_loader import Elasticloader
 from services.ml.src.cv_parser import CVParser
 
 router = APIRouter()
-loader = Mongoloader()
+loader    = Mongoloader()
 es_loader = Elasticloader()
 
 class ExperienceLevel(str, Enum):
-    debutant = "D"
+    debutant  = "D"
     souhaitee = "S"
-    exigee = "E"
+    exigee    = "E"
 
 class QueryRequest(BaseModel):
-    query: str = Field(..., description="Texte de recherche ou contenu du CV", min_length=3)
-    top_n: int = Field(10, description="Nombre d'offres à retourner", ge=1, le=50)
-    contract_type: str | None = Field(None, description="Type de contrat : CDI, CDD, etc.")
-    workplace_city: str | None = Field(None, description="Ville ou département")
-    required_experience: ExperienceLevel | None = Field(None, description="D: débutant, S: souhaitée, E: exigée")
-    source: str | None = Field(None, description="Source de l'offre : France_Travail, wttj...")
-    rome_label: str | None = Field(None, description="Métier ex: Data engineer, Infirmier...")
-    apprenticeship: bool | None = Field(None, description="Alternance uniquement")
-    sector_activity_label: str | None = Field(None, description="Secteur d'activité")
+    query:                 str            = Field(..., description="Texte de recherche ou contenu du CV", min_length=3)
+    top_n:                 int            = Field(10, description="Nombre d'offres à retourner", ge=1, le=50)
+    contract_type:         str | None     = Field(None, description="Type de contrat : CDI, CDD, etc.")
+    workplace_city:        str | None     = Field(None, description="Ville ou département")
+    required_experience:   ExperienceLevel | None = Field(None, description="D: débutant, S: souhaitée, E: exigée")
+    source:                str | None     = Field(None, description="Source de l'offre")
+    rome_label:            str | None     = Field(None, description="Métier ex: Data engineer, Infirmier...")
+    apprenticeship:        bool | None    = Field(None, description="Alternance uniquement")
+    sector_activity_label: str | None     = Field(None, description="Secteur d'activité")
+    show_detail:           bool           = Field(True, description="Afficher l'analyse de compatibilité")
 
 
 def _build_es_filter(
-    contract_type: str | None = None,
-    workplace_city: str | None = None,
-    required_experience: str | None = None,
-    source: str | None = None,
-    rome_label: str | None = None,
-    apprenticeship: bool | None = None,
-    sector_activity_label: str | None = None
+    contract_type:         str | None  = None,
+    workplace_city:        str | None  = None,
+    required_experience:   str | None  = None,
+    source:                str | None  = None,
+    rome_label:            str | None  = None,
+    apprenticeship:        bool | None = None,
+    sector_activity_label: str | None  = None
 ) -> list:
     """Construit les clauses de filtre ES."""
     must = []
-
     if contract_type:
         must.append({"term": {"contract_type": contract_type.upper()}})
     if workplace_city:
@@ -57,18 +57,17 @@ def _build_es_filter(
         must.append({"term": {"apprenticeship": apprenticeship}})
     if sector_activity_label:
         must.append({"match": {"sector_activity_label": {"query": sector_activity_label, "fuzziness": "AUTO"}}})
-
     return must
 
 
 def _get_filtered_ids(
-    contract_type: str | None = None,
-    workplace_city: str | None = None,
-    required_experience: str | None = None,
-    source: str | None = None,
-    rome_label: str | None = None,
-    apprenticeship: bool | None = None,
-    sector_activity_label: str | None = None
+    contract_type:         str | None  = None,
+    workplace_city:        str | None  = None,
+    required_experience:   str | None  = None,
+    source:                str | None  = None,
+    rome_label:            str | None  = None,
+    apprenticeship:        bool | None = None,
+    sector_activity_label: str | None  = None
 ) -> list | None:
     """
     Retourne les ids filtrés via Elasticsearch.
@@ -84,21 +83,19 @@ def _get_filtered_ids(
         apprenticeship=apprenticeship,
         sector_activity_label=sector_activity_label
     )
-
     if not must:
-        return None  # pas de filtre → toutes les offres
+        return None
 
     body = {
         "query": {"bool": {"must": must}},
         "_source": ["id"],
         "size": 10000
     }
-
     res = es_loader.es.search(index=es_loader.index_name, body=body)
-    ids = [hit["_source"]["id"] for hit in res["hits"]["hits"]]
-    return ids  # [] si aucun résultat
+    return [hit["_source"]["id"] for hit in res["hits"]["hits"]]
 
-def _get_offres(top_offres: list, model: str) -> list:
+
+def _get_offres(top_offres: list, model: str, show_detail: bool = True) -> list:
     """Récupère les offres complètes depuis MongoDB et ajoute score/detail."""
     offres_trouvees = []
     for offre in top_offres:
@@ -108,22 +105,24 @@ def _get_offres(top_offres: list, model: str) -> list:
         if not result:
             continue
         result["score"] = offre.get("score_final") or offre.get("score")
-        if model in ["hybrid", "knn"]:
+        if model in ["hybrid", "knn"] and show_detail:
             result["detail"] = offre.get("detail")
         offres_trouvees.append(result)
     return offres_trouvees
 
 
-def _run_model(model: str, query: str, top_n: int, filtered_ids: list) -> list:
+def _run_model(model: str, query: str, top_n: int,
+               filtered_ids: list, show_detail: bool = True) -> list:
     """Sélectionne et lance le bon modèle."""
     if model == "sbert":
         return recommend_offers_sbert(query, top_n, filtered_ids)
     elif model == "hybrid":
-        return recommend_offers_hybrid(query, top_n, filtered_ids)
+        return recommend_offers_hybrid(query, top_n, filtered_ids, show_detail=show_detail)
     elif model == "knn":
-        return recommend_offers_knn(query, top_n, filtered_ids)
+        return recommend_offers_knn(query, top_n, filtered_ids, show_detail=show_detail)
     else:
         return recommend_offers(query, top_n, filtered_ids)
+
 
 @router.post("/")
 def get_offer(q: QueryRequest, model: str = "tfidf"):
@@ -140,23 +139,25 @@ def get_offer(q: QueryRequest, model: str = "tfidf"):
     if filtered_ids == []:
         return []
 
-    top_offres = _run_model(model, q.query, q.top_n, filtered_ids)
-    return _get_offres(top_offres, model)
+    top_offres = _run_model(model, q.query, q.top_n, filtered_ids, show_detail=q.show_detail)
+    return _get_offres(top_offres, model, show_detail=q.show_detail)
+
 
 @router.post("/cv")
 async def recommend_from_cv(
-    file: UploadFile = File(...),
-    top_n: int = 10,
-    contract_type: str | None = None,
-    workplace_city: str | None = None,
-    required_experience: ExperienceLevel | None = None,
-    rome_label: str | None = None,
-    apprenticeship: bool | None = None,
+    file:                  UploadFile = File(...),
+    top_n:                 int        = 10,
+    contract_type:         str | None = None,
+    workplace_city:        str | None = None,
+    required_experience:   ExperienceLevel | None = None,
+    rome_label:            str | None = None,
+    apprenticeship:        bool | None = None,
     sector_activity_label: str | None = None,
-    model: str = "tfidf"
+    model:                 str        = "tfidf",
+    show_detail:           bool       = True
 ):
     if file.filename.endswith(".pdf"):
-        cv_bytes = await file.read()
+        cv_bytes  = await file.read()
         cv_parsed = CVParser().parse(file_bytes=cv_bytes, file_type="pdf")
     else:
         raise HTTPException(status_code=422, detail="Format non supporté. Envoyez un fichier PDF.")
@@ -172,5 +173,5 @@ async def recommend_from_cv(
     if filtered_ids == []:
         return []
 
-    top_offres = _run_model(model, cv_parsed, top_n, filtered_ids)
-    return _get_offres(top_offres, model)
+    top_offres = _run_model(model, cv_parsed, top_n, filtered_ids, show_detail=show_detail)
+    return _get_offres(top_offres, model, show_detail=show_detail)
