@@ -1,4 +1,5 @@
 import logging
+import sys
 import requests
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -25,10 +26,15 @@ def reset_elasticsearch():
         logger.error(f"Erreur ES : {response.status_code} — {response.text}")
 
 if __name__ == "__main__":
-    reset_mongodb()
-    reset_elasticsearch()
-    logger.info("Reset complet ✅")
+    es_only = "--es-only" in sys.argv
 
+    if es_only:
+        reset_elasticsearch()
+        logger.info("Reset ES uniquement ✅")
+    else:
+        reset_mongodb()
+        reset_elasticsearch()
+        logger.info("Reset complet ✅")
 
 '''
 PYTHONPATH=. python scripts/reset_db.py

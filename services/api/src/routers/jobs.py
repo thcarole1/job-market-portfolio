@@ -88,6 +88,13 @@ def get_offers(
     ).skip(skip).limit(limit))
     return offres
 
+@router.get("/rome-labels")
+def get_rome_labels():
+    """Retourne la liste des rome_label uniques triés alphabétiquement."""
+    rome_labels = loader.db["offres_normalisees"].distinct("rome_label")
+    return sorted([r for r in rome_labels if r])
+
+
 @router.get("/{id}")
 def get_offer(id: str):
     '''GET /offers/{id}  — retourne le détail d'une offre depuis MongoDB'''
