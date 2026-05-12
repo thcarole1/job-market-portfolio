@@ -32,3 +32,8 @@ def test_normalize_gere_champs_none():
     result = normalize_france_travail(offre_minimale)
     assert isinstance(result, dict)
     assert result["id"] == "TEST456"
+
+def test_normalize_competences_detectees(offre_brute_minimale):
+    result = normalize_france_travail(offre_brute_minimale)
+    assert "competences_detectees" in result
+    assert isinstance(result["competences_detectees"], list)
