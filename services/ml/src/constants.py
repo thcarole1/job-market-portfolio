@@ -1,7 +1,7 @@
 # ── Compétences techniques connues ────────────────────
 COMPETENCES_CONNUES = [
     # ── Langages de programmation ─────────────────────
-    "Python", "SQL", "Scala", "Java", "R", "Julia",
+    "Python", "SQL", "Scala", "Java", "Langage R", "Julia",
     "Go", "Rust", "C++", "C#", "JavaScript", "TypeScript",
     "Bash", "Shell", "Perl",
 
@@ -53,7 +53,7 @@ COMPETENCES_CONNUES = [
 
     # ── DevOps & infrastructure ───────────────────────
     "Docker", "Kubernetes", "Helm", "Terraform",
-    "Ansible", "Puppet", "Chef", "Vagrant",
+    "Ansible", "Puppet", "Vagrant",
     "CI/CD", "Jenkins", "GitLab CI", "GitHub Actions",
     "CircleCI", "ArgoCD", "Prometheus", "Grafana",
     "Datadog", "New Relic", "ELK", "Jaeger",

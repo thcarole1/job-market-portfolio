@@ -2,6 +2,7 @@ import logging
 from fastapi import APIRouter
 from services.ingestion.src.loaders.mongo_loader import Mongoloader
 
+
 logger = logging.getLogger(__name__)
 router = APIRouter()
 loader = Mongoloader()
@@ -96,13 +97,24 @@ def get_stats(
         {"$sort": {"_id": 1}}
     ]))
 
+    # ── Top 20 compétences demandées ──────────────────────
+    top_competences = list(loader.db["offres_normalisees"].aggregate([
+        match_stage,
+        {"$match": {"competences_detectees": {"$ne": None, "$ne": []}}},
+        {"$unwind": "$competences_detectees"},
+        {"$group": {"_id": "$competences_detectees", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+        {"$limit": 20}
+    ]))
+
     return {
-        "total":          total,
-        "par_contrat":    [{"label": r["_id"] or "N/A", "count": r["count"]} for r in par_contrat],
-        "top_villes":     [{"label": r["_id"] or "N/A", "count": r["count"]} for r in top_villes],
-        "top_secteurs":   [{"label": r["_id"] or "N/A", "count": r["count"]} for r in top_secteurs],
-        "par_experience": [{"label": exp_map.get(r["_id"], r["_id"] or "N/A"), "count": r["count"]} for r in par_experience],
-        "top_metiers":    [{"label": r["_id"] or "N/A", "count": r["count"]} for r in top_metiers],
-        "alternance":     [{"label": "Alternance" if r["_id"] else "Hors alternance", "count": r["count"]} for r in alternance],
-        "evolution":      [{"label": r["_id"], "count": r["count"]} for r in evolution]
+        "total":           total,
+        "par_contrat":     [{"label": r["_id"] or "N/A", "count": r["count"]} for r in par_contrat],
+        "top_villes":      [{"label": r["_id"] or "N/A", "count": r["count"]} for r in top_villes],
+        "top_secteurs":    [{"label": r["_id"] or "N/A", "count": r["count"]} for r in top_secteurs],
+        "par_experience":  [{"label": exp_map.get(r["_id"], r["_id"] or "N/A"), "count": r["count"]} for r in par_experience],
+        "top_metiers":     [{"label": r["_id"] or "N/A", "count": r["count"]} for r in top_metiers],
+        "alternance":      [{"label": "Alternance" if r["_id"] else "Hors alternance", "count": r["count"]} for r in alternance],
+        "evolution":       [{"label": r["_id"], "count": r["count"]} for r in evolution],
+        "top_competences": [{"label": r["_id"], "count": r["count"]} for r in top_competences],
     }

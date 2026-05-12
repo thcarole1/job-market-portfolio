@@ -131,3 +131,8 @@ with col1:
 
 with col2:
     line_chart_temporal(stats["evolution"], "📆 Évolution mensuelle des offres")
+
+
+# ── Graphiques ligne 4 ────────────────────────────────
+st.markdown("---")
+bar_chart_sorted(stats["top_competences"], "🛠️ Top 20 compétences demandées")
