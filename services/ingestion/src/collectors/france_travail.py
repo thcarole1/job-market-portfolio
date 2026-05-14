@@ -1,9 +1,10 @@
-
 import requests
 import logging
+
 logger = logging.getLogger(__name__)
 
 from config.settings import settings
+
 
 class FranceTravailCollector:
 
@@ -12,9 +13,7 @@ class FranceTravailCollector:
 
     def _get_token(self):
         """Récupère un token d'authentification OAuth2."""
-
-        logger.info("Début de l'opération de récupération du token France Travail")
-
+        logger.info("Récupération du token France Travail...")
         try:
             url = "https://entreprise.francetravail.fr/connexion/oauth2/access_token"
             params = {"realm": "/partenaire"}
@@ -26,21 +25,34 @@ class FranceTravailCollector:
             }
             response = requests.post(url, params=params, data=data)
             response.raise_for_status()
-            logger.info("Opération de récupération de token réussie")
-            self._token= response.json()["access_token"]
+            self._token = response.json()["access_token"]
+            logger.info("Token récupéré ✅")
             return self._token
         except requests.exceptions.HTTPError as e:
-            logger.error(f"Erreur HTTP : {e}")
+            logger.error(f"Erreur HTTP token : {e}")
             raise
 
-    def _search_offers(self,
-                       mots_cles = None,
-                       rome_code=None,
-                       range_str = "0-149"):
-        """Recherche des offres d'emploi via l'API FranceTravail.
-        Retourne un dictionnaire global avec une liste d'offres et d'autres informations (filtres possibles)"""
+    def _search_offers(
+        self,
+        mots_cles=None,
+        rome_code=None,
+        range_str="0-149",
+        min_creation_date=None,
+    ):
+        """
+        Recherche des offres via l'API France Travail.
 
-        logger.info(f"Début de l'opération de récupération d'offres France Travail - Range {range_str}")
+        Paramètres
+        ----------
+        min_creation_date : str | None
+            Format ISO 8601 : "2024-01-15T00:00:00Z"
+            Si fourni, ne retourne que les offres publiées après cette date.
+        """
+        logger.info(
+            f"Recherche offres — ROME={rome_code or 'tous'} range={range_str}"
+            + (f" depuis={min_creation_date}" if min_creation_date else "")
+        )
+
         if self._token is None:
             self._get_token()
 
@@ -51,13 +63,14 @@ class FranceTravailCollector:
                 "Accept":        "application/json"
             }
             params = {
-                "motsCles":   mots_cles,
-                "range":      range_str,
-                "sort":       "1"
+                "motsCles": mots_cles,
+                "range":    range_str,
+                "sort":     "1"
             }
-
             if rome_code:
                 params["codeROME"] = rome_code
+            if min_creation_date:
+                params["minCreationDate"] = min_creation_date
 
             response = requests.get(url, headers=headers, params=params)
             response.raise_for_status()
@@ -66,51 +79,77 @@ class FranceTravailCollector:
                 logger.warning(f"Réponse vide pour le range {range_str}")
                 return {"resultats": []}
 
-            logger.info("Opération de récupération des offres réussie")
             return response.json()
 
         except requests.exceptions.HTTPError as e:
-            logger.error(f"Erreur HTTP : {e}")
+            logger.error(f"Erreur HTTP search : {e}")
             raise
 
-    def collect_all_offers(self,mots_cles=None, rome_codes=None):
+    def collect_all_offers(
+        self,
+        mots_cles=None,
+        rome_codes=None,
+        existing_ids=None,
+        min_creation_date=None,
+    ):
         """
-        Recherche de toutes les offres d'emploi via l'API FranceTravail.
-        - mots_cles : filtre par mots clés
-        - rome_codes : liste de codes ROME à collecter
-        Si rome_codes est fourni, boucle sur chaque code ROME.
+        Collecte les offres France Travail.
+
+        Paramètres
+        ----------
+        existing_ids : set | None
+            IDs déjà présents en base — préparés par main.py.
+            Filtre appliqué après chaque page de résultats.
+        min_creation_date : str | None
+            Date ISO 8601 passée à l'API pour filtrer les offres anciennes.
+            Préparée par main.py depuis la date de la dernière offre en base.
+            Exemple : "2024-01-15T00:00:00Z"
         """
+        existing_ids = existing_ids or set()
+        mode = "incrémental" if existing_ids or min_creation_date else "complet"
+        logger.info(f"Début collecte France Travail — mode {mode}")
 
-        logger.info("Début de l'opération de récupération de toutes les offres France Travail")
-
-        try :
+        try:
             start, stop, step = 0, 3149, 150
-            ranges = [f"{start}-{min(start+step-1, stop)}" for start in range (start, stop, step)]
+            ranges = [
+                f"{start}-{min(start + step - 1, stop)}"
+                for start in range(start, stop, step)
+            ]
             offres = []
-            ids_collectes = set()  # ← évite les doublons entre codes ROME
+            ids_collectes = set()  # doublons entre codes ROME dans la même session
 
             codes = rome_codes if rome_codes else [None]
 
             for code in codes:
-                logger.info(f"Collecte pour le code ROME : {code or 'tous'}")
+                logger.info(f"Collecte ROME : {code or 'tous'}")
                 for range_unit in ranges:
                     resultats = self._search_offers(
                         mots_cles=mots_cles,
                         rome_code=code,
-                        range_str=range_unit
+                        range_str=range_unit,
+                        min_creation_date=min_creation_date,
                     )
-                    if not resultats["resultats"]:
-                        logger.info(f"Plus d'offres à partir du range {range_unit}, arrêt de la collecte")
-                        break
-                    # Déduplique par id
-                    for offre in resultats["resultats"]:
-                        if offre["id"] not in ids_collectes:
-                            offres.append(offre)
-                            ids_collectes.add(offre["id"])
 
-            logger.info(f"Opération de récupération de toutes les offres réussie — {len(offres)} offres collectées")
+                    if not resultats["resultats"]:
+                        logger.info(f"Plus d'offres à partir du range {range_unit}, arrêt")
+                        break
+
+                    n_avant = len(offres)
+                    for offre in resultats["resultats"]:
+                        offre_id = offre["id"]
+                        if offre_id in ids_collectes:   # doublon session
+                            continue
+                        if offre_id in existing_ids:    # déjà en base
+                            continue
+                        offres.append(offre)
+                        ids_collectes.add(offre_id)
+
+                    n_nouvelles = len(offres) - n_avant
+                    logger.info(f"  Range {range_unit} : {n_nouvelles} nouvelles offres")
+
+            logger.info(f"Collecte terminée — {len(offres)} nouvelles offres")
             return offres
 
         except requests.exceptions.HTTPError as e:
-            logger.error(f"Erreur HTTP : {e}")
+            logger.error(f"Erreur HTTP collecte : {e}")
             raise
