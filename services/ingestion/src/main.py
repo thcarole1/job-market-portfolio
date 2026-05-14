@@ -101,3 +101,19 @@ if __name__ == "__main__":
         elastic_loader.index_offer(offer=offre_normalisee)
 
     logger.info("Pipeline d'ingestion terminé ✅")
+
+    # 7. Enrichissement skills — uniquement les nouvelles offres
+    #    (filtre automatique via $exists: False dans enrich_skills.run())
+    logger.info("Enrichissement skills (SBERT zero-shot) des nouvelles offres...")
+    try:
+        from scripts.enrich_skills import run as enrich_skills_run
+        enrich_skills_run(
+            force=False,       # uniquement les offres sans skills_extraits
+            threshold=0.75,
+            dry_run=False,
+            batch_size=50,
+        )
+        logger.info("Enrichissement skills terminé ✅")
+    except Exception as e:
+        # L'enrichissement ne doit jamais bloquer la collecte
+        logger.error(f"Enrichissement skills échoué — pipeline non bloqué : {e}")
