@@ -1,4 +1,6 @@
 import logging
+from datetime import datetime, timezone, timedelta
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -8,10 +10,45 @@ from services.ingestion.src.loaders.elastic_loader import Elasticloader
 from services.ingestion.src.utils.normalizer import normalize_france_travail
 from services.ml.src.encoder import encode_offer, MODEL_NAME
 
-if __name__ == "__main__":
 
-    # 1. Collecte France Travail
-    collector = FranceTravailCollector()
+def _get_existing_ids(mongo_loader) -> set:
+    """Retourne l'ensemble des IDs déjà présents dans offres_normalisees."""
+    col = mongo_loader.db["offres_normalisees"]
+    ids = {doc["id"] for doc in col.find({}, projection={"id": 1, "_id": 0})}
+    logger.info(f"{len(ids)} IDs existants chargés depuis MongoDB")
+    return ids
+
+
+def _get_min_creation_date(mongo_loader) -> str | None:
+    """
+    Retourne la date de création de l'offre la plus récente en base,
+    moins 1 jour de marge, au format ISO 8601.
+    Retourne None si la base est vide (collecte complète).
+    """
+    col = mongo_loader.db["offres_normalisees"]
+    doc = col.find_one(
+        {"creation_date": {"$exists": True}},
+        sort=[("creation_date", -1)],
+        projection={"creation_date": 1}
+    )
+
+    if not doc:
+        logger.info("Base vide — collecte complète sans filtre date")
+        return None
+
+    last_date = doc["creation_date"]
+    try:
+        dt = datetime.fromisoformat(last_date.replace("Z", "+00:00"))
+        dt = dt - timedelta(days=1)
+        result = dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+        logger.info(f"Dernière offre en base : {last_date} → filtre depuis : {result}")
+        return result
+    except (ValueError, AttributeError):
+        logger.warning(f"Format date non reconnu : {last_date} — collecte complète")
+        return None
+
+
+if __name__ == "__main__":
 
     ROME_CODES = [
         # ── Data & IA ─────────────────────────────────────
@@ -74,26 +111,38 @@ if __name__ == "__main__":
         "G1601",  # Hôtellerie
     ]
 
-    offres_brutes = collector.collect_all_offers(rome_codes=ROME_CODES)
-    logger.info(f"{len(offres_brutes)} offres collectées")
-
-    # 2. Insertion brutes dans MongoDB
+    # 1. Connexion MongoDB
     mongo_loader = Mongoloader()
+
+    # 2. Préparation des filtres incrémantaux (responsabilité de main.py)
+    existing_ids      = _get_existing_ids(mongo_loader)
+    min_creation_date = _get_min_creation_date(mongo_loader)
+
+    # 3. Collecte France Travail — le collecteur ne connaît pas MongoDB
+    collector    = FranceTravailCollector()
+    offres_brutes = collector.collect_all_offers(
+        rome_codes=ROME_CODES,
+        existing_ids=existing_ids,
+        min_creation_date=min_creation_date,
+    )
+    logger.info(f"{len(offres_brutes)} nouvelles offres à traiter")
+
+    if not offres_brutes:
+        logger.info("Aucune nouvelle offre — pipeline terminé.")
+        exit(0)
+
+    # 4. Insertion brutes dans MongoDB
     logger.info("Insertion des offres brutes dans MongoDB...")
     for offre in offres_brutes:
         mongo_loader.insert_raw_offer(offer=offre)
 
-    # 3. Normalisation
-    # 4. Encoding SBERT
-    # 5. Insertion normalisées dans MongoDB
-    # 6. Indexation Elasticsearch
+    # 5. Normalisation + encoding SBERT + insertion normalisées + indexation ES
     elastic_loader = Elasticloader()
     logger.info("Normalisation, encoding SBERT et indexation des offres...")
 
     for offre in offres_brutes:
         offre_normalisee = normalize_france_travail(offre)
 
-        # Calcul de l'embedding SBERT
         offre_normalisee["embedding"]       = encode_offer(offre_normalisee)
         offre_normalisee["embedding_model"] = MODEL_NAME
 
@@ -101,3 +150,17 @@ if __name__ == "__main__":
         elastic_loader.index_offer(offer=offre_normalisee)
 
     logger.info("Pipeline d'ingestion terminé ✅")
+
+    # 6. Enrichissement skills — uniquement les nouvelles offres
+    logger.info("Enrichissement skills (SBERT zero-shot) des nouvelles offres...")
+    try:
+        from scripts.enrich_skills import run as enrich_skills_run
+        enrich_skills_run(
+            force=False,
+            threshold=0.75,
+            dry_run=False,
+            batch_size=50,
+        )
+        logger.info("Enrichissement skills terminé ✅")
+    except Exception as e:
+        logger.error(f"Enrichissement skills échoué — pipeline non bloqué : {e}")
