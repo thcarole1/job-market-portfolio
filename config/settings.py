@@ -58,6 +58,7 @@ class Settings(BaseSettings):
     #sans toucher au docker-compose.yml.
     API_PORT :int
     INGESTION_PORT : int
+    FRONTEND_PORT : int
 
 
 settings = Settings()

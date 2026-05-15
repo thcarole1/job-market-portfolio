@@ -65,6 +65,25 @@ services:
         - ELASTIC_HOST=elasticsearch
         - POSTGRES_HOST=postgresql
 
+  frontend:
+        build:
+          context: .
+          dockerfile: services/frontend/Dockerfile
+        container_name: frontend
+        env_file:
+          - .env
+        ports:
+          - "${FRONTEND_PORT:-8501}:8501"
+        depends_on:
+          api:
+            condition: service_started
+        networks:
+          - job-market-backend-portfolio
+          - job-market-frontend-portfolio
+        environment:
+          - API_URL=http://api:8000
+        restart: unless-stopped
+
 
  # ── Bases de données ──────────────────────────────────────
   postgresql:
