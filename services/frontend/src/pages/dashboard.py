@@ -2,56 +2,116 @@ import streamlit as st
 import requests
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 API_URL = "http://localhost:8000"
 
 st.set_page_config(page_title="Dashboard", page_icon="📊", layout="wide")
-st.title("📊 Dashboard — Marché de l'emploi")
+st.title("📊 Marché de l'emploi — Vue d'ensemble")
+st.caption("Données issues de France Travail — actualisées quotidiennement")
 
-# ── Fonctions de visualisation ────────────────────────
-def bar_chart_sorted(data: list, title: str):
-    """Affiche un bar chart horizontal trié par ordre décroissant."""
+# ── Palette cohérente ─────────────────────────────────────────────────────────
+BLUE   = "#4C78A8"
+GREEN  = "#54A24B"
+ORANGE = "#F58518"
+RED    = "#E45756"
+PURPLE = "#B279A2"
+TEAL   = "#4DBBD5"
+COLORS = [BLUE, GREEN, ORANGE, RED, PURPLE, TEAL,
+          "#EDC948", "#FF9DA7", "#9D755D", "#BAB0AC"]
+
+# ── Helpers graphiques ────────────────────────────────────────────────────────
+
+def bar_h(data: list, title: str, color: str = BLUE, height: int = 380) -> go.Figure:
+    """Bar chart horizontal trié."""
     if not data:
-        st.info("Aucune donnée disponible")
-        return
+        return None
     df = pd.DataFrame(data).sort_values("count", ascending=True)
-    fig = px.bar(
-        df,
-        x="count",
-        y="label",
-        orientation="h",
-        title=title,
-        color_discrete_sequence=["#4C78A8"]
-    )
-    fig.update_layout(
-        yaxis_title="",
-        xaxis_title="Nombre d'offres",
-        height=400
-    )
-    st.plotly_chart(fig, width='stretch')
+    fig = px.bar(df, x="count", y="label", orientation="h",
+                 title=title, color_discrete_sequence=[color])
+    fig.update_layout(yaxis_title="", xaxis_title="Offres",
+                      height=height, margin=dict(l=0, r=10, t=40, b=0))
+    return fig
 
 
-def line_chart_temporal(data: list, title: str):
-    """Affiche un line chart pour l'évolution temporelle."""
+def bar_v(data: list, title: str, color: str = BLUE, height: int = 340) -> go.Figure:
+    """Bar chart vertical."""
     if not data:
-        st.info("Aucune donnée disponible")
-        return
-    df = pd.DataFrame(data).sort_values("label")  # ordre chronologique
-    fig = px.line(
-        df,
-        x="label",
-        y="count",
-        title=title,
-        markers=True
-    )
-    fig.update_layout(
-        xaxis_title="Période",
-        yaxis_title="Nombre d'offres",
-        height=400
-    )
-    st.plotly_chart(fig, width='stretch')
+        return None
+    df = pd.DataFrame(data).sort_values("count", ascending=False)
+    fig = px.bar(df, x="label", y="count", title=title,
+                 color_discrete_sequence=[color])
+    fig.update_layout(xaxis_title="", yaxis_title="Offres",
+                      height=height, margin=dict(l=0, r=10, t=40, b=60),
+                      xaxis_tickangle=-30)
+    return fig
 
-# ── Fonctions cache ───────────────────────────────────
+
+def pie(data: list, title: str, height: int = 340) -> go.Figure:
+    """Pie chart."""
+    if not data:
+        return None
+    df = pd.DataFrame(data)
+    fig = px.pie(df, names="label", values="count", title=title,
+                 color_discrete_sequence=COLORS, hole=0.35)
+    fig.update_layout(height=height, margin=dict(l=0, r=0, t=40, b=0),
+                      legend=dict(orientation="v", x=1, y=0.5))
+    fig.update_traces(textposition="inside", textinfo="percent+label")
+    return fig
+
+
+def line_trend(data: list, title: str, height: int = 340) -> go.Figure:
+    """Line chart avec droite de tendance."""
+    if not data:
+        return None
+    df = pd.DataFrame(data).sort_values("label")
+    fig = go.Figure()
+
+    # Ligne principale
+    fig.add_trace(go.Scatter(
+        x=df["label"], y=df["count"],
+        mode="lines+markers",
+        name="Offres publiées",
+        line=dict(color=BLUE, width=2),
+        marker=dict(size=6),
+    ))
+
+    # Tendance linéaire simple
+    if len(df) >= 3:
+        import numpy as np
+        x_num = list(range(len(df)))
+        z     = np.polyfit(x_num, df["count"], 1)
+        p     = np.poly1d(z)
+        trend = p(x_num)
+        direction = "↗ Tendance haussière" if z[0] > 0 else "↘ Tendance baissière"
+        fig.add_trace(go.Scatter(
+            x=df["label"], y=trend,
+            mode="lines",
+            name=direction,
+            line=dict(color=ORANGE, width=2, dash="dash"),
+        ))
+
+    fig.update_layout(
+        title=title,
+        xaxis_title="Mois",
+        yaxis_title="Offres",
+        height=height,
+        margin=dict(l=0, r=10, t=40, b=40),
+        legend=dict(orientation="h", y=-0.2),
+    )
+    return fig
+
+
+def show(fig, key=None):
+    """Affiche un graphique ou un message si données absentes."""
+    if fig:
+        st.plotly_chart(fig, use_container_width=True, key=key)
+    else:
+        st.info("Aucune donnée disponible")
+
+
+# ── Cache ─────────────────────────────────────────────────────────────────────
 
 @st.cache_data(ttl=3600)
 def get_rome_labels():
@@ -60,6 +120,7 @@ def get_rome_labels():
         return ["Tous"] + sorted(r.json())
     except:
         return ["Tous"]
+
 
 @st.cache_data(ttl=300)
 def get_stats(rome_label=None, ville=None, periode=None):
@@ -73,66 +134,121 @@ def get_stats(rome_label=None, ville=None, periode=None):
     r = requests.get(f"{API_URL}/stats/", params=params)
     return r.json()
 
-# ── Filtres ───────────────────────────────────────────
-st.subheader("🔎 Filtres")
-col1, col2, col3 = st.columns(3)
-with col1:
-    rome_labels      = get_rome_labels()
-    metier_selectionne = st.selectbox("Métier", rome_labels)
-with col2:
-    ville_filtre = st.text_input("Ville", placeholder="Ex: Paris")
-with col3:
-    periode_filtre = st.text_input("Période", placeholder="Ex: 2026-03")
+
+# ── Filtres ───────────────────────────────────────────────────────────────────
+with st.expander("🔎 Filtres", expanded=True):
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        rome_labels        = get_rome_labels()
+        metier_selectionne = st.selectbox("🎯 Métier", rome_labels)
+    with col2:
+        ville_filtre = st.text_input("📍 Ville", placeholder="Ex: Paris, Lyon...")
+    with col3:
+        mois_options   = ["Tous"] + [f"2025-{m:02d}" for m in range(1, 13)] + [f"2026-{m:02d}" for m in range(1, 6)]
+        periode_filtre = st.selectbox("📅 Période", mois_options)
 
 st.markdown("---")
 
-# ── Chargement stats ──────────────────────────────────
+# ── Chargement ────────────────────────────────────────────────────────────────
 with st.spinner("Chargement des statistiques..."):
     stats = get_stats(
-        rome_label=metier_selectionne,
+        rome_label=metier_selectionne if metier_selectionne != "Tous" else None,
         ville=ville_filtre or None,
-        periode=periode_filtre or None
+        periode=None if periode_filtre == "Tous" else periode_filtre,
     )
 
-# ── KPIs ──────────────────────────────────────────────
+# ── NIVEAU 1 : KPIs ───────────────────────────────────────────────────────────
 st.subheader("📈 Indicateurs clés")
-col1, col2, col3, col4 = st.columns(4)
-col1.metric("Total offres", stats["total"])
 
-par_contrat = {r["label"]: r["count"] for r in stats["par_contrat"]}
-col2.metric("CDI",  par_contrat.get("CDI", 0))
-col3.metric("CDD",  par_contrat.get("CDD", 0))
+par_contrat  = {r["code"]: r["count"] for r in stats["par_contrat"]}
+alternance   = {r["label"]: r["count"] for r in stats["alternance"]}
+total        = stats["total"]
 
-alternance = {r["label"]: r["count"] for r in stats["alternance"]}
-col4.metric("Alternance", alternance.get("Alternance", 0))
+col1, col2, col3, col4, col5, col6 = st.columns(6)
+col1.metric("📋 Total offres",    f"{total:,}".replace(",", " "))
+col2.metric("💼 CDI",             f"{par_contrat.get('CDI', 0):,}".replace(",", " "),
+            f"{par_contrat.get('CDI', 0)/total*100:.0f}%" if total else "")
+col3.metric("📄 CDD",             f"{par_contrat.get('CDD', 0):,}".replace(",", " "),
+            f"{par_contrat.get('CDD', 0)/total*100:.0f}%" if total else "")
+col4.metric("🔄 Intérim",         f"{par_contrat.get('MIS', 0):,}".replace(",", " "),
+            f"{par_contrat.get('MIS', 0)/total*100:.0f}%" if total else "")
+col5.metric("🎓 Alternance",      f"{alternance.get('Alternance', 0):,}".replace(",", " "))
+col6.metric("💰 Salaire affiché", f"{stats.get('taux_salaire', 0)}%",
+            "des offres")
 
 st.markdown("---")
 
-# ── Graphiques ligne 1 ────────────────────────────────
-col1, col2 = st.columns(2)
-with col1:
-    bar_chart_sorted(stats["par_contrat"], "📋 Répartition par type de contrat")
+# ── NIVEAU 1 : Évolution temporelle ──────────────────────────────────────────
+st.subheader("📆 Évolution des publications")
+show(line_trend(stats["evolution"], "Publications mensuelles d'offres"), key="evolution")
 
-with col2:
-    bar_chart_sorted(stats["top_villes"], "🏙️ Top 10 villes")
-
-# ── Graphiques ligne 2 ────────────────────────────────
-col1, col2 = st.columns(2)
-with col1:
-    bar_chart_sorted(stats["top_secteurs"], "🏭 Top 10 secteurs d'activité")
-
-with col2:
-    bar_chart_sorted(stats["par_experience"], "📅 Répartition par expérience")
-
-# ── Graphiques ligne 3 ────────────────────────────────
-col1, col2 = st.columns(2)
-with col1:
-    bar_chart_sorted(stats["top_metiers"], "💼 Top 10 métiers")
-
-with col2:
-    line_chart_temporal(stats["evolution"], "📆 Évolution mensuelle des offres")
-
-
-# ── Graphiques ligne 4 ────────────────────────────────
 st.markdown("---")
-bar_chart_sorted(stats["top_competences"], "🛠️ Top 20 compétences demandées")
+
+# ── NIVEAU 2 : Skills — valeur ajoutée ML ────────────────────────────────────
+st.subheader("🧠 Compétences demandées — Analyse ML")
+st.caption("Extraction automatique par modèle SBERT zero-shot sur l'ensemble des offres")
+
+col1, col2 = st.columns(2)
+with col1:
+    show(bar_h(
+        stats.get("top_competences", []),
+        "🛠️ Top 20 compétences techniques (hard skills)",
+        color=BLUE, height=500
+    ), key="hard_skills")
+
+with col2:
+    # Fusion soft explicites + implicites pour un graphique unique
+    soft_exp = stats.get("top_soft_explicites", [])
+    soft_imp = stats.get("top_soft_implicites", [])
+
+    # Marquer la source
+    for s in soft_exp:
+        s["source"] = "Explicite"
+    for s in soft_imp:
+        s["source"] = "Implicite"
+
+    soft_all = sorted(soft_exp + soft_imp, key=lambda x: x["count"], reverse=True)[:15]
+
+    if soft_all:
+        df_soft = pd.DataFrame(soft_all).sort_values("count", ascending=True)
+        fig_soft = px.bar(
+            df_soft, x="count", y="label", orientation="h",
+            color="source",
+            color_discrete_map={"Explicite": GREEN, "Implicite": TEAL},
+            title="🤝 Top 15 soft skills demandés",
+        )
+        fig_soft.update_layout(
+            yaxis_title="", xaxis_title="Offres",
+            height=500, margin=dict(l=0, r=10, t=40, b=0),
+            legend=dict(title="Type", orientation="h", y=-0.15),
+        )
+        show(fig_soft, key="soft_skills")
+    else:
+        st.info("Soft skills en cours d'extraction — relancer après le batch nocturne.")
+
+st.markdown("---")
+
+# ── NIVEAU 3 : Données marché ─────────────────────────────────────────────────
+st.subheader("🗺️ Données marché")
+
+col1, col2 = st.columns(2)
+with col1:
+    show(bar_h(stats["top_villes"],   "🏙️ Top 10 villes",     color=BLUE),   key="villes")
+with col2:
+    show(pie(stats["par_contrat"][:6], "📋 Types de contrat"), key="contrats")
+
+col1, col2 = st.columns(2)
+with col1:
+    show(bar_h(stats["par_experience"], "📅 Niveau d'expérience requis", color=ORANGE), key="experience")
+with col2:
+    show(bar_h(stats["top_secteurs"],   "🏭 Top 10 secteurs d'activité", color=PURPLE), key="secteurs")
+
+col1, col2 = st.columns(2)
+with col1:
+    show(bar_h(stats["top_metiers"], "💼 Top 10 métiers", color=TEAL), key="metiers")
+with col2:
+    # Alternance : donut simple
+    show(pie(stats["alternance"], "🎓 Alternance vs CDI/CDD"), key="alternance")
+
+st.markdown("---")
+st.caption(f"📊 {stats.get('avec_skills', 0):,} offres analysées par ML sur {total:,} au total ({stats.get('taux_skills', 0)}% du corpus)".replace(",", " "))
