@@ -1,3 +1,5 @@
+import os
+import requests
 import streamlit as st
 
 st.set_page_config(
@@ -5,6 +7,8 @@ st.set_page_config(
     page_icon="💼",
     layout="wide"
 )
+
+API_URL = os.getenv("API_URL", "http://localhost:8000")
 
 st.title("💼 Job Market Portfolio")
 st.markdown("---")
@@ -25,9 +29,6 @@ st.subheader("Vue d'ensemble")
 
 col1, col2, col3 = st.columns(3)
 
-API_URL = "http://localhost:8000"
-
-import requests
 try:
     response = requests.get(f"{API_URL}/health")
     if response.status_code == 200:
@@ -36,8 +37,3 @@ try:
         col1.metric("Statut API", "❌ Hors ligne")
 except:
     col1.metric("Statut API", "❌ Hors ligne")
-
-
-'''
-streamlit run services/frontend/src/main.py
-'''
