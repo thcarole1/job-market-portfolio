@@ -44,5 +44,5 @@ jobs:
       - name: Installer les dépendances
         run: pip install -r requirements.txt
 
-      - name: Lancer les tests unitaires
-        run: PYTHONPATH=. pytest tests/ -m "not integration" -v
+      - name: Lancer les tests unitaires (ml + ingestion)
+        run: PYTHONPATH=. pytest tests/ml/ tests/ingestion/ -v
