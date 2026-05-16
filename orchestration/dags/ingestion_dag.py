@@ -24,7 +24,7 @@ with DAG(
     dag_id="ingestion_nocturne",
     description="Collecte France Travail + normalisation + enrichissement SBERT",
     start_date=datetime(2026, 5, 16),
-    schedule="0 * * * *",   # ← toutes les heures (test) | remplacer par "0 2 * * *" en prod
+    schedule="0 2 * * *",   # ← toutes les heures (test) | remplacer par "0 2 * * *" en prod
     catchup=False,           # ne rattrape pas les exécutions manquées passées
     tags=["ingestion", "france-travail", "sbert"],
 ) as dag:
