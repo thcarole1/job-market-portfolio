@@ -8,3 +8,5 @@ __pycache__/
 *.pyc
 .env
 services/ml/models/
+backup/
+logs/
