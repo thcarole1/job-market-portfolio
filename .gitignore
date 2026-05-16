@@ -42,3 +42,8 @@ Thumbs.db
 notebooks/
 .ipynb_checkpoints/
 services/ml/models/
+
+
+backup/
+logs/airflow/
+logs/

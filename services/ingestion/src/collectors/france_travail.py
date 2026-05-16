@@ -69,10 +69,16 @@ class FranceTravailCollector:
             }
             if rome_code:
                 params["codeROME"] = rome_code
-            if min_creation_date:
-                params["minCreationDate"] = min_creation_date
 
-            response = requests.get(url, headers=headers, params=params)
+            query_string = "&".join(f"{k}={v}" for k, v in params.items() if v is not None)
+
+
+            if min_creation_date:
+                from datetime import datetime, timezone
+                max_date = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+                query_string += f"&minCreationDate={min_creation_date}&maxCreationDate={max_date}"
+
+            response = requests.get(f"{url}?{query_string}", headers=headers)
             response.raise_for_status()
 
             if not response.text:

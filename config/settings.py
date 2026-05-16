@@ -60,5 +60,8 @@ class Settings(BaseSettings):
     INGESTION_PORT : int
     FRONTEND_PORT : int
 
+    # Airflow
+    AIRFLOW_SECRET_KEY : str
+
 
 settings = Settings()
