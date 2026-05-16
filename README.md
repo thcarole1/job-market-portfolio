@@ -8,6 +8,8 @@
 [![MongoDB](https://img.shields.io/badge/MongoDB-8.0-green?logo=mongodb)](https://mongodb.com)
 [![Elasticsearch](https://img.shields.io/badge/Elasticsearch-8.17-yellow?logo=elasticsearch)](https://elastic.co)
 [![Docker](https://img.shields.io/badge/Docker-Compose-blue?logo=docker)](https://docker.com)
+[![CI](https://github.com/thcarole1/job-market-portfolio/actions/workflows/ci.yml/badge.svg)](https://github.com/thcarole1/job-market-portfolio/actions/workflows/ci.yml)
+[![Airflow](https://img.shields.io/badge/Airflow-2.9.1-017CEE?logo=apacheairflow)](https://airflow.apache.org)
 
 ---
 
@@ -115,7 +117,8 @@ Jour (à la demande) :
 | ML — Recherche | TF-IDF, Cosine similarity, KNN | 4 modèles de recommandation |
 | Conteneurisation | Docker + Docker Compose | 7 services, reproductibilité |
 | Tests | pytest | 41+ tests unitaires et d'intégration |
-| Orchestration | Airflow (en cours) | DAG de collecte nocturne |
+| Orchestration | Airflow 2.9.1 | DAG ingestion_nocturne — collecte quotidienne à 2h |
+| CI/CD | GitHub Actions | Tests unitaires automatiques sur push et PR |
 | Versioning | Git + GitHub | Workflow `main ← develop ← feat/*` |
 
 ---
@@ -181,7 +184,8 @@ job-market-portfolio/
 │
 ├── orchestration/
 │   └── dags/
-│       └── ingestion_dag.py           # DAG Airflow (en cours)
+│       ├── ingestion_dag.py           # DAG Airflow — collecte nocturne quotidienne
+│       └── Dockerfile                 # Image Airflow custom avec dépendances projet
 │
 ├── notebooks/
 │   ├── test_skills_extractor.ipynb    # Validation extraction skills
@@ -193,7 +197,7 @@ job-market-portfolio/
 │   ├── ingestion/                     # test_normalizer
 │   └── ml/                            # test_cv_structurer, test_hybrid_scorer, test_skills_extractor
 │
-├── docker-compose.yml                 # 7 services
+├── docker-compose.yml                 # 10 services (dont 3 Airflow)
 ├── requirements.txt
 ├── .env.example
 └── pytest.ini
@@ -234,6 +238,7 @@ docker compose ps
 | Frontend Streamlit | http://localhost:8501 | Interface utilisateur |
 | API FastAPI | http://localhost:8000 | REST API + Swagger UI |
 | API Docs | http://localhost:8000/docs | Documentation interactive |
+| Airflow | http://localhost:8080 | Orchestration — DAG ingestion_nocturne |
 | Kibana | http://localhost:5601 | Interface Elasticsearch |
 | PgAdmin | http://localhost:5050 | Interface PostgreSQL |
 
@@ -283,6 +288,9 @@ FRONTEND_PORT=8501
 # Environnement
 ENVIRONMENT=dev
 LOG_LEVEL=INFO
+
+# Airflow
+AIRFLOW_SECRET_KEY=your_secret_key_here  # générer avec : python -c "import secrets; print(secrets.token_hex(32))"
 ```
 
 ---
@@ -516,6 +524,26 @@ docker compose build frontend && docker compose up -d frontend
 PYTHONPATH=. python services/ingestion/src/main.py
 ```
 
+### Airflow
+
+```bash
+# Initialiser Airflow (première fois uniquement)
+docker compose up airflow-init
+
+# Lancer le scheduler et le webserver
+docker compose up -d airflow-scheduler airflow-webserver
+
+# Voir les DAGs disponibles
+docker exec airflow-scheduler airflow dags list
+
+# Activer/désactiver le DAG
+docker exec airflow-scheduler airflow dags unpause ingestion_nocturne
+docker exec airflow-scheduler airflow dags pause ingestion_nocturne
+
+# Interface web
+open http://localhost:8080  # admin / admin
+```
+
 ### Lancement Streamlit en local (développement)
 
 ```bash
@@ -551,9 +579,9 @@ docs:  documentation
 - [x] API FastAPI + Frontend Streamlit
 - [x] Conteneurisation Docker complète
 - [x] Dashboard marché avec soft skills ML
-- [ ] Airflow — orchestration nocturne automatisée
+- [x] Airflow — orchestration nocturne automatisée (DAG quotidien à 2h)
 - [ ] Monitoring Prometheus + Grafana
-- [ ] Pipeline CI/CD GitHub Actions
+- [x] Pipeline CI/CD GitHub Actions (tests unitaires sur push et PR)
 - [ ] Reverse proxy Nginx (sécurité)
 - [ ] Géocodage GPS (API Géo gouv.fr)
 - [ ] Génération CV/LM personnalisés
