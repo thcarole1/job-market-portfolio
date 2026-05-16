@@ -1,0 +1,48 @@
+name: CI — Tests unitaires
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [develop, main]
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+
+    env:
+      POSTGRES_HOST:               ${{ secrets.POSTGRES_HOST }}
+      POSTGRES_PORT:               ${{ secrets.POSTGRES_PORT }}
+      POSTGRES_DB:                 ${{ secrets.POSTGRES_DB }}
+      POSTGRES_USER:               ${{ secrets.POSTGRES_USER }}
+      POSTGRES_PASSWORD:           ${{ secrets.POSTGRES_PASSWORD }}
+      MONGO_HOST:                  ${{ secrets.MONGO_HOST }}
+      MONGO_PORT:                  ${{ secrets.MONGO_PORT }}
+      MONGO_INITDB_ROOT_USERNAME:  ${{ secrets.MONGO_INITDB_ROOT_USERNAME }}
+      MONGO_INITDB_ROOT_PASSWORD:  ${{ secrets.MONGO_INITDB_ROOT_PASSWORD }}
+      ELASTIC_HOST:                ${{ secrets.ELASTIC_HOST }}
+      ELASTIC_PORT:                ${{ secrets.ELASTIC_PORT }}
+      ELASTICSEARCH_INDEX:         ${{ secrets.ELASTICSEARCH_INDEX }}
+      FRANCETRAVAIL_CLIENT_ID:     ${{ secrets.FRANCETRAVAIL_CLIENT_ID }}
+      FRANCETRAVAIL_CLIENT_SECRET: ${{ secrets.FRANCETRAVAIL_CLIENT_SECRET }}
+      PGADMIN_EMAIL:               ${{ secrets.PGADMIN_EMAIL }}
+      PGADMIN_PASSWORD:            ${{ secrets.PGADMIN_PASSWORD }}
+      API_PORT:                    ${{ secrets.API_PORT }}
+      INGESTION_PORT:              ${{ secrets.INGESTION_PORT }}
+      FRONTEND_PORT:               ${{ secrets.FRONTEND_PORT }}
+      AIRFLOW_SECRET_KEY:          ${{ secrets.AIRFLOW_SECRET_KEY }}
+
+    steps:
+      - name: Cloner le repo
+        uses: actions/checkout@v4
+
+      - name: Installer Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Installer les dépendances
+        run: pip install -r requirements.txt
+
+      - name: Lancer les tests unitaires (ml + ingestion)
+        run: PYTHONPATH=. pytest tests/ml/ tests/ingestion/ -v
