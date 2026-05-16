@@ -30,7 +30,7 @@ services:
         - ml_models:/app/services/ml/models
       depends_on:
         ingestion:
-          condition: service_completed_successfully
+          condition: service_started
         mongodb:
           condition: service_started
       networks:
