@@ -24,4 +24,4 @@ RUN adduser --disabled-password --gecos "" appuser
 USER appuser
 
 # Commande de démarrage
-CMD ["python", "services/ingestion/src/main.py"]
+CMD ["tail", "-f", "/dev/null"]
