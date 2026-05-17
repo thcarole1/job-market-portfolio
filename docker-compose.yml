@@ -146,6 +146,7 @@ services:
       postgresql:
         condition: service_started
     command: scheduler
+    user: "0:0"
     restart: unless-stopped
 
   airflow-webserver:
